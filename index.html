@@ -602,20 +602,31 @@ button { font-family: inherit; cursor: pointer; }
 }
 .toast.show { opacity: 1; }
 
-/* ─── SUNO BUTTON ────────────────────────────────────── */
-.suno-btn {
+/* ─── MUSIC AI BUTTONS ───────────────────────────────── */
+.music-btns {
+  display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px;
+}
+.suno-btn, .udio-btn {
   display: inline-flex; align-items: center; gap: 8px;
-  margin-top: 14px;
   padding: 10px 20px;
-  background: #1db954; color: #fff;
   border: none; border-radius: 8px;
   font-size: 14px; font-weight: 600; cursor: pointer;
   transition: background .2s, transform .15s, box-shadow .2s;
-  box-shadow: 0 2px 8px rgba(29,185,84,.35);
   text-decoration: none;
+}
+.suno-btn {
+  background: #1db954; color: #fff;
+  box-shadow: 0 2px 8px rgba(29,185,84,.35);
 }
 .suno-btn:hover { background: #17a349; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(29,185,84,.5); }
 .suno-btn:active { transform: translateY(0); }
+.udio-btn {
+  background: #1a73e8; color: #fff;
+  box-shadow: 0 2px 8px rgba(26,115,232,.35);
+}
+.udio-btn:hover { background: #1558b0; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(26,115,232,.5); }
+.udio-btn:active { transform: translateY(0); }
+@media (max-width: 480px) { .music-btns { flex-direction: column; } }
 
 /* ─── RESPONSIVE ─────────────────────────────────────── */
 @media (max-width: 1100px) { .rp { display: none; } }
@@ -1178,29 +1189,38 @@ function escHtml(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-/* ── SUNO AI BUTTON ─────────────────────────────────── */
+/* ── MUSIC AI BUTTONS ───────────────────────────────── */
 function addSunoButton(msgEl, fullText) {
   const match = fullText.match(/---SUNO_PROMPT_START---\s*([\s\S]*?)\s*---SUNO_PROMPT_END---/);
   if (!match) return;
 
   const sunoPrompt = match[1].trim();
+  const toastMsg = '✅ Prompt copiado. Pega con Cmd+V (Mac) o Ctrl+V (Windows) en el campo de descripción';
 
-  const btn = document.createElement('button');
-  btn.className = 'suno-btn';
-  btn.innerHTML = '🎵 Copiar y abrir Suno AI →';
-  btn.title = 'Copia el prompt y abre Suno AI en una nueva pestaña';
-  btn.onclick = async () => {
-    try {
-      await navigator.clipboard.writeText(sunoPrompt);
-      showToast('✅ Prompt copiado. En Suno pega con Cmd+V (Mac) o Ctrl+V (Windows) en el campo de descripción', 5500);
-    } catch {
-      showToast('No se pudo copiar automáticamente. Copia el prompt manualmente y pégalo en Suno AI.', 5500);
-    }
-    window.open('https://suno.com/create', '_blank');
-  };
+  function makeBtn(cls, label, title, url) {
+    const btn = document.createElement('button');
+    btn.className = cls;
+    btn.innerHTML = label;
+    btn.title = title;
+    btn.onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(sunoPrompt);
+        showToast(toastMsg, 5500);
+      } catch {
+        showToast('No se pudo copiar automáticamente. Copia el prompt manualmente.', 5500);
+      }
+      window.open(url, '_blank');
+    };
+    return btn;
+  }
+
+  const row = document.createElement('div');
+  row.className = 'music-btns';
+  row.appendChild(makeBtn('suno-btn', '🎵 Crear en Suno AI →',  'Copia el prompt y abre Suno AI', 'https://suno.com/create'));
+  row.appendChild(makeBtn('udio-btn', '🎵 Crear en Udio →',     'Copia el prompt y abre Udio',    'https://www.udio.com/create'));
 
   const body = msgEl.querySelector('.msg-body');
-  if (body) body.appendChild(btn);
+  if (body) body.appendChild(row);
 }
 
 /* ── TOAST ──────────────────────────────────────────── */
