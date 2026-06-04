@@ -214,10 +214,14 @@ Cuando el usuario pida componer una canción, debes seguir esta estructura EXACT
 4. Al FINAL de tu respuesta, SIEMPRE incluye esta sección exacta:
 
 ---SUNO_PROMPT_START---
-[estilo musical en inglés], [tono musical], [tempo en BPM aproximado]. Letra: [letra completa de la canción en español]
+═══ ESTILO (pegar en el campo de estilo) ═══
+[estilo musical en inglés], [tono musical], [tempo en BPM aproximado]
+
+═══ LETRA (pegar en el editor de letras) ═══
+[letra completa de la canción, toda en español, con las secciones marcadas como [Verse], [Chorus], [Bridge] para que Suno/Udio las reconozca]
 ---SUNO_PROMPT_END---
 
-IMPORTANTE: La sección SUNO_PROMPT_START/END debe contener el prompt en un solo párrafo continuo con ese formato exacto. Traduce el estilo al inglés pero mantén la letra en español. No incluyas etiquetas ni claves como "Estilo:" o "Letra:" salvo la palabra "Letra:" antes de la letra.
+IMPORTANTE: El bloque SUNO_PROMPT_START/END contiene DOS secciones separadas. El estilo va en inglés. La letra va 100% en español. Usa las etiquetas [Verse], [Chorus], [Bridge] dentro de la letra en el bloque técnico porque Suno y Udio las reconocen para estructurar la canción.
 
 ⚠️ REGLA ABSOLUTA — IDIOMA DE LA LETRA:
 TODA la letra cantable debe estar escrita COMPLETAMENTE en español, de principio a fin.
