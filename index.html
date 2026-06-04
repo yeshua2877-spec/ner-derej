@@ -832,7 +832,7 @@ const AGENTS = [
   { id:'LATREIA',     name:'LATREIA',     sub:'Liturgia y Culto',           icon:'LA', col:'#BF360C',
     desc:'Orden de culto bíblico, liturgia reformada y los elementos esenciales de la adoración corporativa.',
     tips:['¿Cuáles son los elementos bíblicos del culto cristiano?','¿Cómo diseñar un orden de culto balanceado?','¿Qué es el principio regulativo del culto?'] },
-  { id:'MELODIA',     name:'MELODIA',     sub:'Música Sacra',               icon:'ME', col:'#6A1B9A',
+  { id:'MELODIA',     name:'MELODIA',     sub:'Música de Alabanza y Adoración',               icon:'ME', col:'#6A1B9A',
     desc:'Himnología, historia de la música cristiana, teología musical y los Salmos como modelo.',
     tips:['¿Cuál es la historia del himno "Santo, Santo, Santo"?','¿Qué dicen los Salmos sobre la música en el culto?','¿Cómo evaluar teológicamente los cánticos modernos?'] },
   { id:'MICROS',      name:'MICROS',      sub:'Ministerio Infantil',        icon:'MI', col:'#D84315',
@@ -1187,14 +1187,14 @@ function addSunoButton(msgEl, fullText) {
 
   const btn = document.createElement('button');
   btn.className = 'suno-btn';
-  btn.innerHTML = '🎵 Crear en Suno AI →';
-  btn.title = 'Copia el prompt y abre Suno AI';
+  btn.innerHTML = '🎵 Copiar y abrir Suno AI →';
+  btn.title = 'Copia el prompt y abre Suno AI en una nueva pestaña';
   btn.onclick = async () => {
     try {
       await navigator.clipboard.writeText(sunoPrompt);
-      showToast('✅ Prompt copiado al portapapeles. Pégalo en Suno AI.');
+      showToast('✅ Prompt copiado. En Suno pega con Cmd+V (Mac) o Ctrl+V (Windows) en el campo de descripción', 5500);
     } catch {
-      showToast('Abre Suno AI y pega el prompt manualmente.');
+      showToast('No se pudo copiar automáticamente. Copia el prompt manualmente y pégalo en Suno AI.', 5500);
     }
     window.open('https://suno.com/create', '_blank');
   };
@@ -1204,11 +1204,11 @@ function addSunoButton(msgEl, fullText) {
 }
 
 /* ── TOAST ──────────────────────────────────────────── */
-function showToast(msg) {
+function showToast(msg, duration) {
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 3500);
+  setTimeout(() => t.classList.remove('show'), duration || 3500);
 }
 
 /* ── KEYBOARD ───────────────────────────────────────── */
