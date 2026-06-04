@@ -602,6 +602,21 @@ button { font-family: inherit; cursor: pointer; }
 }
 .toast.show { opacity: 1; }
 
+/* ─── SUNO BUTTON ────────────────────────────────────── */
+.suno-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  margin-top: 14px;
+  padding: 10px 20px;
+  background: #1db954; color: #fff;
+  border: none; border-radius: 8px;
+  font-size: 14px; font-weight: 600; cursor: pointer;
+  transition: background .2s, transform .15s, box-shadow .2s;
+  box-shadow: 0 2px 8px rgba(29,185,84,.35);
+  text-decoration: none;
+}
+.suno-btn:hover { background: #17a349; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(29,185,84,.5); }
+.suno-btn:active { transform: translateY(0); }
+
 /* ─── RESPONSIVE ─────────────────────────────────────── */
 @media (max-width: 1100px) { .rp { display: none; } }
 @media (max-width: 880px) { .grid { grid-template-columns: repeat(5, 1fr); } }
@@ -1030,6 +1045,10 @@ async function send() {
     if (full) setMsgBody(msgEl, full);
     history = [...msgs, { role: 'assistant', content: full }];
 
+    if (current && current.id === 'MELODIA') {
+      addSunoButton(msgEl, full);
+    }
+
   } catch (err) {
     removeEl(typId);
     if (msgEl) removeEl(msgEl.id);
@@ -1069,7 +1088,7 @@ function addMsg(role, text) {
 
   const body = document.createElement('div');
   body.className = 'msg-body';
-  body.innerHTML = isUser ? escHtml(text).replace(/\n/g,'<br>') : renderMd(text);
+  body.innerHTML = isUser ? escHtml(text).replace(/\n/g,'<br>') : renderMd(stripSunoBlock(text));
 
   div.appendChild(av);
   div.appendChild(body);
@@ -1080,7 +1099,11 @@ function addMsg(role, text) {
 
 function setMsgBody(el, text) {
   const body = el.querySelector('.msg-body');
-  if (body) body.innerHTML = renderMd(text);
+  if (body) body.innerHTML = renderMd(stripSunoBlock(text));
+}
+
+function stripSunoBlock(text) {
+  return text.replace(/\n?---SUNO_PROMPT_START---[\s\S]*?---SUNO_PROMPT_END---\n?/g, '');
 }
 
 function addTyping() {
@@ -1153,6 +1176,31 @@ function renderMd(t) {
 
 function escHtml(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ── SUNO AI BUTTON ─────────────────────────────────── */
+function addSunoButton(msgEl, fullText) {
+  const match = fullText.match(/---SUNO_PROMPT_START---\s*([\s\S]*?)\s*---SUNO_PROMPT_END---/);
+  if (!match) return;
+
+  const sunoPrompt = match[1].trim();
+
+  const btn = document.createElement('button');
+  btn.className = 'suno-btn';
+  btn.innerHTML = '🎵 Crear en Suno AI →';
+  btn.title = 'Copia el prompt y abre Suno AI';
+  btn.onclick = async () => {
+    try {
+      await navigator.clipboard.writeText(sunoPrompt);
+      showToast('✅ Prompt copiado al portapapeles. Pégalo en Suno AI.');
+    } catch {
+      showToast('Abre Suno AI y pega el prompt manualmente.');
+    }
+    window.open('https://suno.com/create', '_blank');
+  };
+
+  const body = msgEl.querySelector('.msg-body');
+  if (body) body.appendChild(btn);
 }
 
 /* ── TOAST ──────────────────────────────────────────── */
