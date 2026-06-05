@@ -415,6 +415,32 @@ button { font-family: inherit; cursor: pointer; }
 }
 
 /* ─── FOOTER ─────────────────────────────────────────── */
+.site-footer {
+  text-align: center;
+  padding: 18px 20px 22px;
+  border-top: 1px solid var(--gold-border);
+  margin-top: 4px;
+  background: var(--sb-dark);
+  flex-shrink: 0;
+}
+.site-footer-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--gold);
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+}
+.site-footer-meta {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.7;
+}
+@media (max-width: 480px) {
+  .site-footer-title { font-size: 1.05rem; }
+  .site-footer-meta  { font-size: 0.78rem; }
+}
+
 .app-footer {
   background: var(--sb-dark);
   border-top: 1px solid var(--border);
@@ -1245,5 +1271,16 @@ fetch('/api/health').then(r => r.json()).then(d => {
   }
 }).catch(() => {});
 </script>
+
+<!-- ── SITE FOOTER ── -->
+<footer class="site-footer">
+  <div class="site-footer-title">✝ Ner Derej ✝</div>
+  <div class="site-footer-meta">
+    Biblioteca Bíblica Teológica<br>
+    <!-- CONGREGACIÓN: agregar aquí el nombre de la congregación cuando esté disponible -->
+    Desarrollado por Jesús Miguel Anselmo<br>
+    © 2026 · Todos los derechos reservados
+  </div>
+</footer>
 </body>
 </html>
