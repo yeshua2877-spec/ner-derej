@@ -632,7 +632,7 @@ button { font-family: inherit; cursor: pointer; }
 .music-btns {
   display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px;
 }
-.suno-btn, .udio-btn {
+.suno-btn, .eleven-btn, .minimax-btn {
   display: inline-flex; align-items: center; gap: 8px;
   padding: 10px 20px;
   border: none; border-radius: 8px;
@@ -646,12 +646,18 @@ button { font-family: inherit; cursor: pointer; }
 }
 .suno-btn:hover { background: #17a349; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(29,185,84,.5); }
 .suno-btn:active { transform: translateY(0); }
-.udio-btn {
-  background: #1a73e8; color: #fff;
-  box-shadow: 0 2px 8px rgba(26,115,232,.35);
+.eleven-btn {
+  background: #2563eb; color: #fff;
+  box-shadow: 0 2px 8px rgba(37,99,235,.35);
 }
-.udio-btn:hover { background: #1558b0; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(26,115,232,.5); }
-.udio-btn:active { transform: translateY(0); }
+.eleven-btn:hover { background: #1d4ed8; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(37,99,235,.5); }
+.eleven-btn:active { transform: translateY(0); }
+.minimax-btn {
+  background: #ea580c; color: #fff;
+  box-shadow: 0 2px 8px rgba(234,88,12,.35);
+}
+.minimax-btn:hover { background: #c2410c; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(234,88,12,.5); }
+.minimax-btn:active { transform: translateY(0); }
 @media (max-width: 480px) { .music-btns { flex-direction: column; } }
 
 /* ─── RESPONSIVE ─────────────────────────────────────── */
@@ -1221,7 +1227,7 @@ function addSunoButton(msgEl, fullText) {
   if (!match) return;
 
   const sunoPrompt = match[1].trim();
-  const toastMsg = '✅ Copiado. Pega el ESTILO en el campo de estilo y la LETRA en el editor de letras (Cmd+V / Ctrl+V)';
+  const toastMsg = '✅ Copiado. Pega el ESTILO y la LETRA en sus campos (Cmd+V / Ctrl+V)';
 
   function makeBtn(cls, label, title, url) {
     const btn = document.createElement('button');
@@ -1242,8 +1248,9 @@ function addSunoButton(msgEl, fullText) {
 
   const row = document.createElement('div');
   row.className = 'music-btns';
-  row.appendChild(makeBtn('suno-btn', '🎵 Crear en Suno AI →',  'Copia el prompt y abre Suno AI', 'https://suno.com/create'));
-  row.appendChild(makeBtn('udio-btn', '🎵 Crear en Udio →',     'Copia el prompt y abre Udio',    'https://www.udio.com/create'));
+  row.appendChild(makeBtn('suno-btn',    '🎵 Crear en Suno →',        'Copia el prompt y abre Suno',        'https://suno.com/create'));
+  row.appendChild(makeBtn('eleven-btn',  '🎵 Crear en ElevenLabs →',  'Copia el prompt y abre ElevenLabs',  'https://elevenlabs.io/app/music'));
+  row.appendChild(makeBtn('minimax-btn', '🎵 Crear en Minimax →',     'Copia el prompt y abre Minimax',     'https://www.minimax.io/audio'));
 
   const body = msgEl.querySelector('.msg-body');
   if (body) body.appendChild(row);
