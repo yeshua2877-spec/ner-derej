@@ -667,6 +667,59 @@ button { font-family: inherit; cursor: pointer; }
 .minimax-btn:active { transform: translateY(0); }
 @media (max-width: 480px) { .music-btns { flex-direction: column; } }
 
+/* ─── DOWNLOAD BUTTON ────────────────────────────────── */
+.dl-wrap {
+  position: relative;
+  display: inline-block;
+  margin-top: 12px;
+}
+.dl-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 13px;
+  background: rgba(201,162,39,.10);
+  border: 1px solid rgba(201,162,39,.30);
+  border-radius: 7px;
+  color: var(--gold);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .18s;
+  letter-spacing: .3px;
+}
+.dl-btn:hover { background: rgba(201,162,39,.22); border-color: rgba(201,162,39,.50); }
+.dl-menu {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 0;
+  background: #1A2744;
+  border: 1px solid rgba(201,162,39,.30);
+  border-radius: 8px;
+  overflow: hidden;
+  min-width: 170px;
+  z-index: 300;
+  box-shadow: 0 6px 24px rgba(0,0,0,.55);
+  display: none;
+}
+.dl-menu.open { display: block; }
+.dl-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 9px 14px;
+  background: none;
+  border: none;
+  color: var(--text-lt);
+  font-size: 12.5px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background .15s;
+  text-align: left;
+}
+.dl-item:hover { background: rgba(201,162,39,.12); color: var(--gold); }
+
 /* ─── RESPONSIVE ─────────────────────────────────────── */
 @media (max-width: 1100px) { .rp { display: none; } }
 @media (max-width: 880px) { .grid { grid-template-columns: repeat(5, 1fr); } }
@@ -851,6 +904,10 @@ button { font-family: inherit; cursor: pointer; }
 
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
+
+<!-- ── LIBRARIES ── -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.min.js"></script>
 
 <!-- ═══════════════════════════════════════════════════
      JAVASCRIPT
@@ -1099,6 +1156,10 @@ async function send() {
       addSunoButton(msgEl, full);
     }
 
+    if (full && msgEl) {
+      addDownloadButton(msgEl, txt, full);
+    }
+
   } catch (err) {
     removeEl(typId);
     if (msgEl) removeEl(msgEl.id);
@@ -1272,6 +1333,188 @@ function addSunoButton(msgEl, fullText) {
 
   const body = msgEl.querySelector('.msg-body');
   if (body) body.appendChild(row);
+}
+
+/* ── DOWNLOAD BUTTON ────────────────────────────────── */
+function addDownloadButton(msgEl, question, answer) {
+  const agentName = current ? current.name : 'Agente';
+  const today = new Date();
+  const dateStr = today.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const fileDateStr = today.toISOString().slice(0, 10).replace(/-/g, '');
+  const fileBase = 'NerDerej_' + agentName.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '') + '_' + fileDateStr;
+  const verse = 'Lámpara es a mis pies tu palabra, y lumbrera a mi camino. Salmo 119:105';
+
+  function stripToPlain(raw) {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = renderMd(raw);
+    return (tmp.innerText || tmp.textContent || '').trim();
+  }
+
+  const wrap = document.createElement('div');
+  wrap.className = 'dl-wrap';
+
+  const btn = document.createElement('button');
+  btn.className = 'dl-btn';
+  btn.textContent = '⬇ Descargar';
+
+  const menu = document.createElement('div');
+  menu.className = 'dl-menu';
+
+  const formats = [
+    { icon: '📄', label: 'Texto (.txt)', fn: downloadTxt },
+    { icon: '📕', label: 'PDF (.pdf)',   fn: downloadPdf },
+    { icon: '📝', label: 'Word (.docx)', fn: downloadWord },
+  ];
+
+  formats.forEach(f => {
+    const item = document.createElement('button');
+    item.className = 'dl-item';
+    item.innerHTML = '<span>' + f.icon + '</span><span>' + f.label + '</span>';
+    item.onclick = () => { menu.classList.remove('open'); f.fn(); };
+    menu.appendChild(item);
+  });
+
+  btn.onclick = e => { e.stopPropagation(); menu.classList.toggle('open'); };
+  document.addEventListener('click', () => menu.classList.remove('open'));
+
+  wrap.appendChild(menu);
+  wrap.appendChild(btn);
+
+  const body = msgEl.querySelector('.msg-body');
+  if (body) body.appendChild(wrap);
+
+  function downloadTxt() {
+    const lines = [
+      '✝ Ner Derej ✝',
+      'Biblioteca Bíblica Teológica',
+      agentName,
+      dateStr,
+      '',
+      'PREGUNTA:',
+      question,
+      '',
+      'RESPUESTA:',
+      stripToPlain(answer),
+      '',
+      '─────────────────────────────────────────────────────',
+      verse,
+    ].join('\n');
+    const blob = new Blob([lines], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = fileBase + '.txt'; a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function downloadPdf() {
+    if (!window.jspdf) { showToast('jsPDF aún no cargado. Intenta en un momento.'); return; }
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+    const W = doc.internal.pageSize.getWidth();
+    const margin = 20;
+    const maxW = W - margin * 2;
+    let y = 22;
+
+    const gold = [201, 162, 39];
+    const navy = [27, 58, 107];
+    const grey = [120, 120, 120];
+    const dark = [40, 40, 40];
+
+    function addLine(text, opts) {
+      const { size = 11, color = dark, bold = false, align = 'left', gap = 6 } = opts || {};
+      doc.setFont('helvetica', bold ? 'bold' : 'normal');
+      doc.setFontSize(size);
+      doc.setTextColor(...color);
+      const x = align === 'center' ? W / 2 : margin;
+      const lines = doc.splitTextToSize(text, maxW);
+      lines.forEach(line => {
+        if (y > 275) { doc.addPage(); y = 20; }
+        doc.text(line, x, y, { align });
+        y += gap;
+      });
+    }
+
+    addLine('+ Ner Derej +', { size: 18, color: gold, bold: true, align: 'center', gap: 8 });
+    addLine('Biblioteca Biblica Teologica', { size: 12, color: gold, align: 'center', gap: 7 });
+    addLine(agentName, { size: 13, color: navy, bold: true, align: 'center', gap: 7 });
+    addLine(dateStr, { size: 10, color: grey, align: 'center', gap: 10 });
+
+    doc.setDrawColor(...gold);
+    doc.setLineWidth(0.5);
+    doc.line(margin, y, W - margin, y);
+    y += 8;
+
+    addLine('PREGUNTA:', { size: 11, color: navy, bold: true, gap: 6 });
+    addLine(question, { size: 11, color: dark, gap: 6 });
+    y += 4;
+
+    addLine('RESPUESTA:', { size: 11, color: navy, bold: true, gap: 6 });
+    addLine(stripToPlain(answer), { size: 11, color: dark, gap: 5.8 });
+    y += 8;
+
+    if (y > 260) { doc.addPage(); y = 20; }
+    doc.setDrawColor(...gold);
+    doc.line(margin, y, W - margin, y);
+    y += 7;
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(9.5);
+    doc.setTextColor(...grey);
+    const vLines = doc.splitTextToSize(verse, maxW);
+    doc.text(vLines, W / 2, y, { align: 'center' });
+
+    doc.save(fileBase + '.pdf');
+  }
+
+  async function downloadWord() {
+    if (!window.docx) { showToast('Librería docx aún no cargada. Intenta en un momento.'); return; }
+    const { Document, Paragraph, TextRun, AlignmentType, Packer, BorderStyle } = window.docx;
+    const plainAnswer = stripToPlain(answer);
+
+    const goldHex = 'C9A227';
+    const navyHex = '1B3A6B';
+    const greyHex = '888888';
+
+    function centeredPara(text, opts) {
+      return new Paragraph({
+        alignment: AlignmentType.CENTER,
+        children: [new TextRun({ text, ...opts })],
+      });
+    }
+    function leftPara(text, opts) {
+      return new Paragraph({ children: [new TextRun({ text, ...opts })] });
+    }
+    function emptyLine() { return new Paragraph({ children: [new TextRun('')] }); }
+
+    const answerParas = plainAnswer.split('\n').map(line =>
+      leftPara(line, { size: 22 })
+    );
+
+    const docObj = new Document({
+      sections: [{
+        properties: {},
+        children: [
+          centeredPara('✝ Ner Derej ✝', { bold: true, size: 36, color: goldHex }),
+          centeredPara('Biblioteca Bíblica Teológica', { size: 24, color: goldHex }),
+          centeredPara(agentName, { bold: true, size: 26, color: navyHex }),
+          centeredPara(dateStr, { size: 20, color: greyHex }),
+          emptyLine(),
+          leftPara('PREGUNTA:', { bold: true, size: 24, color: navyHex }),
+          leftPara(question, { size: 22 }),
+          emptyLine(),
+          leftPara('RESPUESTA:', { bold: true, size: 24, color: navyHex }),
+          ...answerParas,
+          emptyLine(),
+          centeredPara(verse, { italics: true, size: 20, color: greyHex }),
+        ],
+      }],
+    });
+
+    const blob = await Packer.toBlob(docObj);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = fileBase + '.docx'; a.click();
+    URL.revokeObjectURL(url);
+  }
 }
 
 /* ── TOAST ──────────────────────────────────────────── */
