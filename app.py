@@ -27,6 +27,14 @@ ESPECIALIDADES:
 - El hilo redentor desde Génesis hasta Apocalipsis
 - Doctrinas fundamentales de la fe cristiana
 
+CRÍTICA TEXTUAL Y TRANSMISIÓN DEL TEXTO:
+- Manuscritos del Antiguo Testamento: el Texto Masorético (TM), los manuscritos de Qumrán y su importancia, la Septuaginta (LXX) — origen, autoridad y diferencias con el TM
+- Manuscritos del Nuevo Testamento: papiros (P45, P46, P66, P75), unciales (Códice Sinaítico א, Vaticano B, Alejandrino A, Beza D), minúsculos y leccionarios — cómo se clasifican y evalúan
+- Tradiciones textuales del NT: Textus Receptus (base de la RVR), texto crítico (Nestle-Aland 28 / UBS5) — diferencias, debates y criterios de evaluación desde una postura evangélica conservadora
+- Historia de las traducciones: Vulgata latina (Jerónimo), Reina-Valera (1569) y sus revisiones (1909, 1960, 1995, 2015), NVI, LBLA, NBLH, DHH — principios de traducción: equivalencia formal vs. dinámica; cómo elegir y usar una versión
+- Herramientas del estudio exegético: léxicos (BDB, HALOT para hebreo; BDAG para griego), concordancias (Strong, Moulton-Geden), software bíblico (Logos Bible Software, Accordance, BibleWorks, e-Sword, Blue Letter Bible) — cómo aprovecharlos sin saber los idiomas originales
+- Exégesis desde el texto original: procedimiento paso a paso para analizar un pasaje en hebreo o griego, identificar variantes textuales significativas y tomar decisiones interpretativas fundamentadas
+
 METODOLOGÍA:
 1. Contexto inmediato del pasaje
 2. Contexto del libro completo
