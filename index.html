@@ -745,6 +745,7 @@ button { font-family: inherit; cursor: pointer; }
       <div class="ch-sub" id="chSub"></div>
     </div>
     <button class="ch-clear" onclick="clearChat()">Nueva conversación</button>
+    <button class="ch-clear" onclick="newChat()" title="Volver al inicio y cambiar agente">⌂ Cambiar agente</button>
     <span class="ch-powered">Claude AI · NER DEREJ</span>
   </div>
   <div class="chat-msgs" id="chatMsgs"></div>
@@ -1060,6 +1061,16 @@ function newChat() {
   document.querySelectorAll('.sb-agent-btn').forEach(b => b.classList.remove('active'));
   history = [];
   current = null;
+  msgCnt = 0;
+  document.getElementById('chatMsgs').innerHTML = '';
+  const agentsSec = document.querySelector('.agents-sec');
+  if (agentsSec) agentsSec.scrollTop = 0;
+
+  const btn = document.querySelector('.sb-new-btn');
+  if (btn) {
+    btn.textContent = '✓ Listo';
+    setTimeout(() => { btn.textContent = '+ Nueva Conversación'; }, 1500);
+  }
 }
 
 function clearChat() {
