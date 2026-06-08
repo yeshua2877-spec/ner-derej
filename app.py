@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-app = Flask(__name__, static_folder=".")
+app = Flask(__name__, static_folder="static")
 CORS(app)
 
 api_key = os.environ.get("ANTHROPIC_API_KEY")

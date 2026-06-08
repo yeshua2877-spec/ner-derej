@@ -371,6 +371,13 @@ button { font-family: inherit; cursor: pointer; }
   font-family: 'Inter', sans-serif;
   font-weight: 500;
 }
+@keyframes vbPulse {
+  0%, 100% { filter: brightness(0.88); }
+  50%       { filter: brightness(1.06); }
+}
+.rp-verse img {
+  animation: vbPulse 3.8s ease-in-out infinite;
+}
 
 .rp-cats { margin-top: 10px; }
 .rp-cats-title {
@@ -838,67 +845,10 @@ button { font-family: inherit; cursor: pointer; }
 
       <hr class="rp-divider">
 
-      <div class="rp-verse">
-        <span class="rp-verse-qmark">"</span>
-        <div class="rp-verse-text">Tu palabra es una lámpara a mis pies y una luz en mi sendero.</div>
-        <span class="rp-verse-ref">— Salmo 119:105 (RVR60)</span>
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 70" width="100%" style="display:block;margin-top:14px" aria-label="Huellas que conducen a una lámpara">
-          <defs>
-            <filter id="vnG" x="-30%" y="-30%" width="160%" height="160%">
-              <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="b"/>
-              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-            </filter>
-            <filter id="vgG" x="-40%" y="-40%" width="180%" height="180%">
-              <feGaussianBlur in="SourceGraphic" stdDeviation="2.2" result="b"/>
-              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-            </filter>
-            <radialGradient id="vLH" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stop-color="#FFD700" stop-opacity="0.42"/>
-              <stop offset="100%" stop-color="#FFD700" stop-opacity="0"/>
-            </radialGradient>
-          </defs>
-          <!-- Halo cálido detrás de la lámpara -->
-          <circle cx="165" cy="35" r="30" fill="url(#vLH)"/>
-          <!-- Ícono Lucide "footprints" × 4, decrecientes (izquierda → lámpara) -->
-          <!-- Escala 1.3 — mayor -->
-          <g transform="translate(4,19.4) scale(1.3)" filter="url(#vnG)"
-             stroke="#00FFCC" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0Z"/>
-            <path d="M20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.66 2 8.68V20a2 2 0 1 0 4 0Z"/>
-            <path d="M16 17h4"/><path d="M4 13h4"/>
-          </g>
-          <!-- Escala 1.0 -->
-          <g transform="translate(44,23) scale(1.0)" filter="url(#vnG)"
-             stroke="#00FFCC" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0Z"/>
-            <path d="M20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.66 2 8.68V20a2 2 0 1 0 4 0Z"/>
-            <path d="M16 17h4"/><path d="M4 13h4"/>
-          </g>
-          <!-- Escala 0.75 -->
-          <g transform="translate(78,26) scale(0.75)" filter="url(#vnG)"
-             stroke="#00FFCC" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0Z"/>
-            <path d="M20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.66 2 8.68V20a2 2 0 1 0 4 0Z"/>
-            <path d="M16 17h4"/><path d="M4 13h4"/>
-          </g>
-          <!-- Escala 0.58 — menor -->
-          <g transform="translate(104,28) scale(0.58)" filter="url(#vnG)"
-             stroke="#00FFCC" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0Z"/>
-            <path d="M20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.66 2 8.68V20a2 2 0 1 0 4 0Z"/>
-            <path d="M16 17h4"/><path d="M4 13h4"/>
-          </g>
-          <!-- Sendero → lámpara -->
-          <line x1="122" y1="35" x2="141" y2="35" stroke="#00FFCC" stroke-width="0.8" stroke-dasharray="3,3" opacity="0.4" stroke-linecap="round"/>
-          <polyline points="139,32.5 143,35 139,37.5" stroke="#00FFCC" stroke-width="0.9" fill="none" opacity="0.4" stroke-linecap="round" stroke-linejoin="round"/>
-          <!-- Ícono Lucide "lamp" × 1 — dorado con glow -->
-          <g transform="translate(148,18.2) scale(1.4)" filter="url(#vgG)"
-             stroke="#C9A227" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 12v6"/>
-            <path d="M4.077 10.615A1 1 0 0 0 5 12h14a1 1 0 0 0 .923-1.385l-3.077-7.384A2 2 0 0 0 15 2H9a2 2 0 0 0-1.846 1.23Z"/>
-            <path d="M8 20a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v1a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1z"/>
-          </g>
-        </svg>
+      <div class="rp-verse" style="padding:0;overflow:hidden">
+        <img src="/static/versiculo.png"
+             alt="Salmo 119:105 — Tu palabra es una lámpara a mis pies y una luz en mi sendero"
+             style="width:100%;height:auto;display:block">
       </div>
 
       <div class="rp-cats">
