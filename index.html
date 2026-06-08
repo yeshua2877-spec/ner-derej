@@ -842,62 +842,61 @@ button { font-family: inherit; cursor: pointer; }
         <span class="rp-verse-qmark">"</span>
         <div class="rp-verse-text">Tu palabra es una lámpara a mis pies y una luz en mi sendero.</div>
         <span class="rp-verse-ref">— Salmo 119:105 (RVR60)</span>
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 70" width="100%" style="display:block;margin-top:13px" role="img" aria-label="Huellas que llevan a una lámpara encendida">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 70" width="100%" style="display:block;margin-top:14px" aria-label="Huellas que conducen a una lámpara">
           <defs>
-            <radialGradient id="vHalo" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stop-color="#FFD700" stop-opacity="0.48"/>
-              <stop offset="55%" stop-color="#C9A227" stop-opacity="0.13"/>
-              <stop offset="100%" stop-color="#C9A227" stop-opacity="0"/>
+            <filter id="vnG" x="-30%" y="-30%" width="160%" height="160%">
+              <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="b"/>
+              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+            <filter id="vgG" x="-40%" y="-40%" width="180%" height="180%">
+              <feGaussianBlur in="SourceGraphic" stdDeviation="2.2" result="b"/>
+              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+            <radialGradient id="vLH" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#FFD700" stop-opacity="0.42"/>
+              <stop offset="100%" stop-color="#FFD700" stop-opacity="0"/>
             </radialGradient>
-            <filter id="vNeon" x="-80%" y="-80%" width="260%" height="260%">
-              <feGaussianBlur stdDeviation="2" result="b"/>
-              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-            </filter>
-            <filter id="vFlame" x="-120%" y="-120%" width="340%" height="340%">
-              <feGaussianBlur stdDeviation="2.8" result="b"/>
-              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-            </filter>
           </defs>
-          <ellipse cx="154" cy="26" rx="44" ry="38" fill="url(#vHalo)"/>
-          <g filter="url(#vNeon)" fill="#00FFCC">
-            <ellipse cx="18" cy="60" rx="5.5" ry="7.5" transform="rotate(-12,18,60)"/>
-            <circle cx="13" cy="52" r="1.6"/><circle cx="16.5" cy="50.5" r="1.8"/>
-            <circle cx="21" cy="50.5" r="1.8"/><circle cx="24.5" cy="52" r="1.5"/>
-            <ellipse cx="36" cy="53" rx="5" ry="7" transform="rotate(12,36,53)"/>
-            <circle cx="31" cy="46" r="1.5"/><circle cx="34.5" cy="44.5" r="1.7"/>
-            <circle cx="39" cy="44.5" r="1.7"/><circle cx="42.5" cy="46" r="1.4"/>
-            <ellipse cx="59" cy="49" rx="4.5" ry="6" transform="rotate(-10,59,49)"/>
-            <circle cx="55" cy="43" r="1.3"/><circle cx="58" cy="41.5" r="1.4"/>
-            <circle cx="62" cy="41.5" r="1.4"/><circle cx="65.5" cy="43" r="1.2"/>
-            <ellipse cx="80" cy="44" rx="4" ry="5.5" transform="rotate(10,80,44)"/>
-            <circle cx="76" cy="38.5" r="1.1"/><circle cx="79" cy="37" r="1.3"/>
-            <circle cx="83" cy="37" r="1.3"/><circle cx="86" cy="38.5" r="1"/>
-            <ellipse cx="101" cy="40" rx="3.5" ry="5" transform="rotate(-8,101,40)"/>
-            <circle cx="97.5" cy="35" r="1"/><circle cx="100" cy="33.5" r="1.2"/>
-            <circle cx="104" cy="33.5" r="1.2"/><circle cx="107" cy="35" r="0.9"/>
-            <ellipse cx="120" cy="36" rx="3" ry="4.5" transform="rotate(8,120,36)"/>
-            <circle cx="117" cy="31.5" r="0.9"/><circle cx="119.5" cy="30" r="1"/>
-            <circle cx="123" cy="30" r="1"/><circle cx="126" cy="31.5" r="0.8"/>
+          <!-- Halo cálido detrás de la lámpara -->
+          <circle cx="165" cy="35" r="30" fill="url(#vLH)"/>
+          <!-- Ícono Lucide "footprints" × 4, decrecientes (izquierda → lámpara) -->
+          <!-- Escala 1.3 — mayor -->
+          <g transform="translate(4,19.4) scale(1.3)" filter="url(#vnG)"
+             stroke="#00FFCC" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0Z"/>
+            <path d="M20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.66 2 8.68V20a2 2 0 1 0 4 0Z"/>
+            <path d="M16 17h4"/><path d="M4 13h4"/>
           </g>
-          <path d="M12,65 Q46,53 86,46 Q110,42 132,35" stroke="#00FFCC" stroke-width="0.5" stroke-dasharray="3,5" fill="none" opacity="0.22"/>
-          <ellipse cx="158" cy="44" rx="17" ry="10" fill="#C9A227"/>
-          <ellipse cx="156" cy="39" rx="9" ry="3.5" fill="#EDD050" opacity="0.6"/>
-          <path d="M143,41 Q139,37 136,31 Q134,28 137.5,27 Q141,26 143,31 L146,39 Z" fill="#B8941F"/>
-          <path d="M173,40 Q182,36 182,44 Q182,52 173,49" stroke="#C9A227" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-          <ellipse cx="158" cy="54" rx="11" ry="3" fill="#9A7A20"/>
-          <ellipse cx="158" cy="56" rx="14" ry="2.5" fill="#7D651A"/>
-          <ellipse cx="137" cy="27" rx="2.5" ry="1.5" fill="#5C4B12"/>
-          <g filter="url(#vFlame)">
-            <path d="M137,27 Q133,19 136,11 Q138.5,5 140,11 Q141.5,19 138,27 Z" fill="#FF8C00"/>
-            <path d="M137,26 Q134.5,20 136.5,14 Q138,9 139.5,14 Q140.5,20 138,26 Z" fill="#FFD600"/>
-            <path d="M137.5,25 Q135.5,21 137,16 Q138,13 139,16 Q139.5,21 138,25 Z" fill="#FFFDE7"/>
+          <!-- Escala 1.0 -->
+          <g transform="translate(44,23) scale(1.0)" filter="url(#vnG)"
+             stroke="#00FFCC" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0Z"/>
+            <path d="M20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.66 2 8.68V20a2 2 0 1 0 4 0Z"/>
+            <path d="M16 17h4"/><path d="M4 13h4"/>
           </g>
-          <g stroke="#FFD600" stroke-linecap="round" opacity="0.52">
-            <line x1="137" y1="10" x2="134" y2="3" stroke-width="1"/>
-            <line x1="139.5" y1="9" x2="141" y2="2" stroke-width="1"/>
-            <line x1="141" y1="12" x2="147" y2="6" stroke-width="0.9"/>
-            <line x1="133" y1="14" x2="126" y2="10" stroke-width="0.8"/>
-            <line x1="143" y1="17" x2="150" y2="14" stroke-width="0.8"/>
+          <!-- Escala 0.75 -->
+          <g transform="translate(78,26) scale(0.75)" filter="url(#vnG)"
+             stroke="#00FFCC" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0Z"/>
+            <path d="M20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.66 2 8.68V20a2 2 0 1 0 4 0Z"/>
+            <path d="M16 17h4"/><path d="M4 13h4"/>
+          </g>
+          <!-- Escala 0.58 — menor -->
+          <g transform="translate(104,28) scale(0.58)" filter="url(#vnG)"
+             stroke="#00FFCC" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0Z"/>
+            <path d="M20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.66 2 8.68V20a2 2 0 1 0 4 0Z"/>
+            <path d="M16 17h4"/><path d="M4 13h4"/>
+          </g>
+          <!-- Sendero → lámpara -->
+          <line x1="122" y1="35" x2="141" y2="35" stroke="#00FFCC" stroke-width="0.8" stroke-dasharray="3,3" opacity="0.4" stroke-linecap="round"/>
+          <polyline points="139,32.5 143,35 139,37.5" stroke="#00FFCC" stroke-width="0.9" fill="none" opacity="0.4" stroke-linecap="round" stroke-linejoin="round"/>
+          <!-- Ícono Lucide "lamp" × 1 — dorado con glow -->
+          <g transform="translate(148,18.2) scale(1.4)" filter="url(#vgG)"
+             stroke="#C9A227" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 12v6"/>
+            <path d="M4.077 10.615A1 1 0 0 0 5 12h14a1 1 0 0 0 .923-1.385l-3.077-7.384A2 2 0 0 0 15 2H9a2 2 0 0 0-1.846 1.23Z"/>
+            <path d="M8 20a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v1a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1z"/>
           </g>
         </svg>
       </div>
