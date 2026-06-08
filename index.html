@@ -131,29 +131,6 @@ button { font-family: inherit; cursor: pointer; }
   letter-spacing: .4px;
 }
 
-.sb-footer {
-  padding: 11px 14px;
-  border-top: 1px solid var(--border);
-  flex-shrink: 0;
-}
-.sb-new-btn {
-  width: 100%;
-  padding: 9px 12px;
-  background: rgba(201,162,39,.10);
-  border: 1px solid rgba(201,162,39,.22);
-  border-radius: 7px;
-  color: var(--gold);
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: .4px;
-  cursor: pointer;
-  transition: all .18s;
-}
-.sb-new-btn:hover {
-  background: rgba(201,162,39,.20);
-  border-color: rgba(201,162,39,.42);
-}
-
 /* ─── MAIN ───────────────────────────────────────────── */
 .main {
   flex: 1;
@@ -359,7 +336,7 @@ button { font-family: inherit; cursor: pointer; }
 }
 .step-text strong { color: var(--text-w); font-weight: 600; }
 
-.rp-divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+.rp-divider { border: none; border-top: 1px solid var(--border); margin: 10px 0; }
 
 .rp-verse {
   background: linear-gradient(135deg, #0D1F3C 0%, #0A1628 100%);
@@ -367,6 +344,7 @@ button { font-family: inherit; cursor: pointer; }
   border-radius: 10px;
   padding: 16px 16px 14px;
   position: relative;
+  text-align: center;
 }
 .rp-verse-qmark {
   font-size: 46px;
@@ -388,13 +366,13 @@ button { font-family: inherit; cursor: pointer; }
   margin-top: 9px;
   font-size: 10px;
   color: var(--text-muted);
-  text-align: right;
+  text-align: center;
   font-style: normal;
   font-family: 'Inter', sans-serif;
   font-weight: 500;
 }
 
-.rp-cats { margin-top: 18px; }
+.rp-cats { margin-top: 10px; }
 .rp-cats-title {
   font-size: 9.5px;
   font-weight: 600;
@@ -779,9 +757,6 @@ button { font-family: inherit; cursor: pointer; }
       <div class="sb-logo-sub">Lámpara para el Camino</div>
     </div>
     <div class="sb-agents" id="sbList"></div>
-    <div class="sb-footer">
-      <button class="sb-new-btn" onclick="newChat()">+ Nueva Conversación</button>
-    </div>
   </aside>
 
   <!-- ── MAIN CENTER ── -->
@@ -1065,12 +1040,6 @@ function newChat() {
   document.getElementById('chatMsgs').innerHTML = '';
   const agentsSec = document.querySelector('.agents-sec');
   if (agentsSec) agentsSec.scrollTop = 0;
-
-  const btn = document.querySelector('.sb-new-btn');
-  if (btn) {
-    btn.textContent = '✓ Listo';
-    setTimeout(() => { btn.textContent = '+ Nueva Conversación'; }, 1500);
-  }
 }
 
 function clearChat() {
