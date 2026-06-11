@@ -1512,44 +1512,135 @@ function addDownloadButton(msgEl, question, answer) {
 
   async function downloadWord() {
     if (!window.docx) { showToast('Librería docx aún no cargada. Intenta en un momento.'); return; }
-    const { Document, Paragraph, TextRun, AlignmentType, Packer, BorderStyle } = window.docx;
-    const plainAnswer = stripToPlain(answer);
+    const {
+      Document, Paragraph, TextRun, AlignmentType, Packer,
+      HeadingLevel, Table, TableRow, TableCell, WidthType, BorderStyle,
+    } = window.docx;
 
     const goldHex = 'C9A227';
     const navyHex = '1B3A6B';
     const greyHex = '888888';
 
-    function centeredPara(text, opts) {
-      return new Paragraph({
-        alignment: AlignmentType.CENTER,
-        children: [new TextRun({ text, ...opts })],
+    // Parse inline markdown (**bold**, *italic*, `code`) → TextRun[]
+    function inlineRuns(text, size = 22) {
+      const runs = [];
+      const re = /\*\*\*(.+?)\*\*\*|\*\*(.+?)\*\*|\*(.+?)\*|`([^`]+)`|([^*`]+)/g;
+      let m;
+      while ((m = re.exec(text)) !== null) {
+        if (m[1] != null) runs.push(new TextRun({ text: m[1], bold: true, italics: true, size }));
+        else if (m[2] != null) runs.push(new TextRun({ text: m[2], bold: true, size }));
+        else if (m[3] != null) runs.push(new TextRun({ text: m[3], italics: true, size }));
+        else if (m[4] != null) runs.push(new TextRun({ text: m[4], font: 'Courier New', size: size - 2 }));
+        else if (m[5]) runs.push(new TextRun({ text: m[5], size }));
+      }
+      return runs.length ? runs : [new TextRun({ text, size })];
+    }
+
+    // Build a real Word table from an array of markdown table lines
+    function makeDocTable(block) {
+      const splitCells = row => row.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim());
+      const border = { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' };
+      const borders = { top: border, bottom: border, left: border, right: border };
+
+      const makeCell = (text, isHeader) => new TableCell({
+        borders,
+        children: [new Paragraph({
+          children: [new TextRun({ text, bold: isHeader, size: 20, color: isHeader ? navyHex : undefined })],
+          spacing: { before: 80, after: 80 },
+        })],
+      });
+
+      const headerCells = splitCells(block[0]).map(h => makeCell(h, true));
+      const dataRows = block.slice(2).filter(r => r.trim() && !/^\|[\s\-:|]+\|$/.test(r));
+
+      return new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        rows: [
+          new TableRow({ tableHeader: true, children: headerCells }),
+          ...dataRows.map(r => new TableRow({ children: splitCells(r).map(c => makeCell(c, false)) })),
+        ],
       });
     }
-    function leftPara(text, opts) {
-      return new Paragraph({ children: [new TextRun({ text, ...opts })] });
-    }
-    function emptyLine() { return new Paragraph({ children: [new TextRun('')] }); }
 
-    const answerParas = plainAnswer.split('\n').map(line =>
-      leftPara(line, { size: 22 })
-    );
+    // Convert raw markdown string → array of docx Block elements
+    function mdToChildren(rawText) {
+      const lines = rawText.split('\n');
+      const out = [];
+      let i = 0;
+      while (i < lines.length) {
+        const line = lines[i];
+
+        if (!line.trim()) {
+          out.push(new Paragraph({ children: [new TextRun('')] }));
+          i++; continue;
+        }
+        if (line.startsWith('### ')) {
+          out.push(new Paragraph({ heading: HeadingLevel.HEADING_3, children: inlineRuns(line.slice(4), 22), spacing: { before: 160, after: 60 } }));
+          i++; continue;
+        }
+        if (line.startsWith('## ')) {
+          out.push(new Paragraph({ heading: HeadingLevel.HEADING_2, children: inlineRuns(line.slice(3), 26), spacing: { before: 200, after: 80 } }));
+          i++; continue;
+        }
+        if (line.startsWith('# ')) {
+          out.push(new Paragraph({ heading: HeadingLevel.HEADING_1, children: inlineRuns(line.slice(2), 30), spacing: { before: 240, after: 100 } }));
+          i++; continue;
+        }
+        if (/^---+$/.test(line.trim())) {
+          out.push(new Paragraph({ children: [new TextRun('')], border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: goldHex } } }));
+          i++; continue;
+        }
+        // Table block: collect all consecutive | lines
+        if (line.trimStart().startsWith('|')) {
+          const block = [];
+          while (i < lines.length && lines[i].trimStart().startsWith('|')) { block.push(lines[i]); i++; }
+          if (block.length >= 3 && /^\|[\s\-:|]+\|/.test(block[1])) {
+            out.push(makeDocTable(block));
+            out.push(new Paragraph({ children: [new TextRun('')] }));
+          } else {
+            block.forEach(l => out.push(new Paragraph({ children: inlineRuns(l) })));
+          }
+          continue;
+        }
+        if (line.startsWith('> ')) {
+          out.push(new Paragraph({ children: inlineRuns(line.slice(2), 22), indent: { left: 720 }, spacing: { before: 60, after: 60 } }));
+          i++; continue;
+        }
+        if (/^[*\-] /.test(line)) {
+          out.push(new Paragraph({ children: inlineRuns(line.slice(2)), bullet: { level: 0 } }));
+          i++; continue;
+        }
+        if (/^\d+\. /.test(line)) {
+          out.push(new Paragraph({ children: inlineRuns(line.replace(/^\d+\. /, '')), numbering: { reference: 'word-numbering', level: 0 } }));
+          i++; continue;
+        }
+        out.push(new Paragraph({ children: inlineRuns(line), spacing: { after: 80 } }));
+        i++;
+      }
+      return out;
+    }
 
     const docObj = new Document({
+      numbering: {
+        config: [{
+          reference: 'word-numbering',
+          levels: [{ level: 0, format: 'decimal', text: '%1.', alignment: AlignmentType.LEFT,
+            style: { paragraph: { indent: { left: 720, hanging: 360 } } } }],
+        }],
+      },
       sections: [{
         properties: {},
         children: [
-          centeredPara('✝ Ner Derej ✝', { bold: true, size: 36, color: goldHex }),
-          centeredPara('Biblioteca Bíblica Teológica', { size: 24, color: goldHex }),
-          centeredPara(agentName, { bold: true, size: 26, color: navyHex }),
-          centeredPara(dateStr, { size: 20, color: greyHex }),
-          emptyLine(),
-          leftPara('PREGUNTA:', { bold: true, size: 24, color: navyHex }),
-          leftPara(question, { size: 22 }),
-          emptyLine(),
-          leftPara('RESPUESTA:', { bold: true, size: 24, color: navyHex }),
-          ...answerParas,
-          emptyLine(),
-          centeredPara(verse, { italics: true, size: 20, color: greyHex }),
+          new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 60 }, children: [new TextRun({ text: 'Ner Derej', bold: true, size: 36, color: goldHex })] }),
+          new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 60 }, children: [new TextRun({ text: 'Biblioteca Biblica Teologica', size: 24, color: goldHex })] }),
+          new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 60 }, children: [new TextRun({ text: agentName, bold: true, size: 26, color: navyHex })] }),
+          new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 200 }, children: [new TextRun({ text: dateStr, size: 20, color: greyHex })] }),
+          new Paragraph({ spacing: { after: 60 }, children: [new TextRun({ text: 'PREGUNTA:', bold: true, size: 24, color: navyHex })] }),
+          new Paragraph({ spacing: { after: 200 }, children: [new TextRun({ text: question, size: 22 })] }),
+          new Paragraph({ spacing: { after: 60 }, children: [new TextRun({ text: 'RESPUESTA:', bold: true, size: 24, color: navyHex })] }),
+          ...mdToChildren(answer),
+          new Paragraph({ children: [new TextRun('')] }),
+          new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: verse, italics: true, size: 20, color: greyHex })] }),
         ],
       }],
     });
