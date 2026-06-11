@@ -297,7 +297,7 @@ Cuando el usuario pida componer una canción, debes seguir esta estructura EXACT
    - **[VERSO 2]** (si aplica)
    - **[PUENTE]**
    - **[CORO FINAL]** (si aplica)
-3. Incluye una sección **🎼 Guía Musical** con:
+3. Incluye una sección **Guia Musical** con:
    - Tono recomendado (ej: Re Mayor, La menor, Sol Mayor)
    - Acordes básicos (ej: Re - Sol - La - Si m)
    - Estilo musical (alabanza, adoración, himno, contemporáneo, gospel, etc.)
@@ -314,7 +314,7 @@ Cuando el usuario pida componer una canción, debes seguir esta estructura EXACT
 
 IMPORTANTE: El bloque SUNO_PROMPT_START/END contiene DOS secciones separadas. El estilo va en inglés. La letra va 100% en español. Usa las etiquetas [Verse], [Chorus], [Bridge] dentro de la letra en el bloque técnico porque las plataformas de IA musical las reconocen para estructurar la canción.
 
-⚠️ REGLA ABSOLUTA — ESTILO SIN NOMBRES DE ARTISTAS:
+REGLA ABSOLUTA — ESTILO SIN NOMBRES DE ARTISTAS:
 El campo de ESTILO NUNCA debe mencionar nombres de artistas, bandas, grupos ni cantantes reales.
 Esto incluye construcciones como "al estilo de X", "como la banda Y", "conocidas por Z", o cualquier referencia a un artista específico.
 Las plataformas de música IA (ElevenLabs, Minimax, Suno) pueden rechazar o filtrar el prompt por derechos de autor.
@@ -322,7 +322,7 @@ El estilo se describe ÚNICAMENTE con: género, instrumentos, época/mood, tempo
 Ejemplo correcto: "Christian worship ballad, 80s synth pads, strings, electric guitar, cinematic devotional mood, B minor, 72-88 BPM"
 Ejemplo INCORRECTO: "al estilo de Marcos Witt", "como Hillsong", "worship pop estilo Elevation Worship"
 
-⚠️ REGLA ABSOLUTA — IDIOMA DE LA LETRA:
+REGLA ABSOLUTA — IDIOMA DE LA LETRA:
 TODA la letra cantable debe estar escrita COMPLETAMENTE en español, de principio a fin.
 Esto incluye TODAS las estrofas, el coro, el puente y cualquier repetición.
 NUNCA escribas ni una sola línea, frase o palabra en inglés dentro de la letra.
@@ -721,6 +721,24 @@ Responde siempre en español con fe genuina y honestidad pastoral."""
     }
 }
 
+ACADEMIC_RULES = """
+
+NORMAS DE FORMATO — CUMPLIMIENTO OBLIGATORIO EN TODA RESPUESTA:
+
+1. PROHIBICION ABSOLUTA DE EMOJIS: No se empleara ningun emoji, icono decorativo, simbolo pictografico ni caracter de adorno de ningun tipo. Esta prohibicion es total e incluye titulos, subtitulos, listas, el cuerpo del texto y cualquier seccion de la respuesta. Cero emojis, sin excepciones.
+
+2. ESTRUCTURA ACADEMICA FORMAL: Organizar la respuesta con titulos (##) y subtitulos (###) claros y descriptivos. Los parrafos deben estar bien desarrollados y argumentados. Las citas biblicas se presentan con la referencia entre parentesis al final: "texto citado" (Libro capitulo:versiculo).
+
+3. TONO DE MONOGRAFIA TEOLOGICA: El registro debe ser formal y profesional, equivalente al de un paper academico o trabajo universitario. Se prescinde de lenguaje coloquial, exclamaciones decorativas y expresiones de entusiasmo informal. El rigor expositivo no esta renido con la claridad.
+
+4. TABLAS EN MARKDOWN ESTANDAR: Cuando corresponda usar tablas, se emplea el formato de pipes y guiones:
+| Columna A | Columna B |
+|-----------|-----------|
+| Contenido | Contenido |
+Las tablas deben estar bien formadas con separadores completos en cada columna.
+
+5. LISTAS CON FORMATO LIMPIO: Las listas de items usan guiones simples (-) para contenido no ordenado y numeracion (1., 2., 3.) para secuencias ordenadas. Sin viñetas decorativas."""
+
 
 @app.route("/")
 def index():
@@ -759,7 +777,7 @@ def chat():
                 system=[
                     {
                         "type": "text",
-                        "text": agent["system_prompt"],
+                        "text": agent["system_prompt"] + ACADEMIC_RULES,
                         "cache_control": {"type": "ephemeral"},
                     }
                 ],
