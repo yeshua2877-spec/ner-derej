@@ -896,7 +896,7 @@ button { font-family: inherit; cursor: pointer; }
 <div class="toast" id="toast"></div>
 
 <!-- ── LIBRARIES ── -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.min.js"></script>
 
 <!-- ═══════════════════════════════════════════════════
@@ -1411,103 +1411,212 @@ function addDownloadButton(msgEl, question, answer) {
   }
 
   function downloadPdf() {
-    if (typeof html2pdf === 'undefined') { showToast('html2pdf aún no cargado. Intenta en un momento.'); return; }
+    if (!window.jspdf) { showToast('jsPDF aún no cargado. Intenta en un momento.'); return; }
+    const { jsPDF } = window.jspdf;
 
-    // Container that the browser will render (html2canvas takes a screenshot of it)
-    const container = document.createElement('div');
-    container.style.cssText = [
-      'width:170mm',
-      'padding:0',
-      'font-family:Inter,sans-serif',
-      'font-size:11pt',
-      'color:#282828',
-      'background:#ffffff',
-      'line-height:1.55',
-      'box-sizing:border-box',
-      'position:absolute',
-      'left:-9999px',
-      'top:0',
-    ].join(';');
+    const doc  = new jsPDF({ unit: 'mm', format: 'a4' });
+    const PW   = doc.internal.pageSize.getWidth();   // 210 mm
+    const PH   = doc.internal.pageSize.getHeight();  // 297 mm
+    const ML   = 20, MR = 20, MT = 20, MB = 18;
+    const CW   = PW - ML - MR;                       // 170 mm usable width
+    let y      = MT;
 
-    // Scoped styles for rendered markdown inside the PDF
-    const styleEl = document.createElement('style');
-    styleEl.textContent = `
-      .pdf-md h1,.pdf-md h2,.pdf-md h3{color:#1B3A6B;font-family:Inter,sans-serif;font-weight:700;margin:10px 0 5px;}
-      .pdf-md h1{font-size:14pt;}.pdf-md h2{font-size:12pt;}.pdf-md h3{font-size:11pt;}
-      .pdf-md p{margin:0 0 7px;}
-      .pdf-md strong{font-weight:700;}
-      .pdf-md em{font-style:italic;}
-      .pdf-md ul,.pdf-md ol{padding-left:18px;margin:0 0 7px;}
-      .pdf-md li{margin-bottom:3px;}
-      .pdf-md blockquote{border-left:3px solid #C9A227;padding-left:10px;color:#555;font-style:italic;margin:7px 0;}
-      .pdf-md code{background:#f0f0f0;padding:1px 5px;border-radius:3px;font-size:9.5pt;font-family:monospace;}
-      .pdf-md pre{background:#f0f0f0;padding:8px;border-radius:4px;white-space:pre-wrap;overflow-wrap:break-word;}
-      .pdf-md table{border-collapse:collapse;width:100%;margin-bottom:10px;}
-      .pdf-md th,.pdf-md td{border:1px solid #ccc;padding:5px 8px;font-size:9.5pt;text-align:left;}
-      .pdf-md th{background:#f0f0f0;font-weight:700;}
-      .pdf-md hr{border:none;border-top:1px solid #ccc;margin:8px 0;}
-    `;
+    const GOLD = [201, 162,  39];
+    const NAVY = [ 27,  58, 107];
+    const GREY = [130, 130, 130];
+    const DARK = [ 35,  35,  35];
 
-    function makeDivider() {
-      const d = document.createElement('div');
-      d.style.cssText = 'border-top:1.5px solid #C9A227;margin:10px 0;';
-      return d;
+    // Add a new page if the next block won't fit
+    function needsPage(h) {
+      if (y + h > PH - MB) { doc.addPage(); y = MT; }
     }
 
-    const header = document.createElement('div');
-    header.style.cssText = 'text-align:center;margin-bottom:14px;';
-    header.innerHTML =
-      '<div style="font-size:20pt;font-weight:bold;color:#C9A227;">✡ Ner Derej ✡</div>' +
-      '<div style="font-size:11pt;color:#C9A227;margin-top:3px;">Biblioteca Bíblica Teológica</div>' +
-      '<div style="font-size:12pt;font-weight:bold;color:#1B3A6B;margin-top:5px;">' + escHtml(agentName) + '</div>' +
-      '<div style="font-size:9.5pt;color:#787878;margin-top:3px;">' + dateStr + '</div>';
+    // Strip inline markdown markers (*bold*, **bold**, `code`, etc.)
+    function plain(t) {
+      return t
+        .replace(/\*\*\*(.+?)\*\*\*/g, '$1')
+        .replace(/\*\*(.+?)\*\*/g,     '$1')
+        .replace(/\*(.+?)\*/g,         '$1')
+        .replace(/_(.+?)_/g,           '$1')
+        .replace(/`([^`]+)`/g,         '$1');
+    }
 
-    const questionSection = document.createElement('div');
-    questionSection.style.marginBottom = '10px';
-    const qLabel = document.createElement('div');
-    qLabel.style.cssText = 'font-size:10.5pt;font-weight:bold;color:#1B3A6B;margin-bottom:4px;';
-    qLabel.textContent = 'PREGUNTA:';
-    const qText = document.createElement('div');
-    qText.style.fontSize = '10.5pt';
-    qText.textContent = question;
-    questionSection.appendChild(qLabel);
-    questionSection.appendChild(qText);
+    // Render a wrapped text block; each line gets its own page-break check
+    function textBlock(text, opts) {
+      const {
+        size = 11, color = DARK, style = 'normal',
+        align = 'left', indent = 0, leading = 5.5, gap = 1,
+      } = opts || {};
+      if (!text || !text.trim()) return;
+      doc.setFont('helvetica', style);
+      doc.setFontSize(size);
+      doc.setTextColor(...color);
+      const x    = align === 'center' ? PW / 2 : ML + indent;
+      const wrap = CW - indent;
+      doc.splitTextToSize(text, wrap).forEach(ln => {
+        needsPage(leading + 1);
+        doc.text(ln, x, y, align === 'center' ? { align: 'center' } : undefined);
+        y += leading;
+      });
+      y += gap;
+    }
 
-    const answerSection = document.createElement('div');
-    const aLabel = document.createElement('div');
-    aLabel.style.cssText = 'font-size:10.5pt;font-weight:bold;color:#1B3A6B;margin-bottom:5px;';
-    aLabel.textContent = 'RESPUESTA:';
-    const aBody = document.createElement('div');
-    aBody.className = 'pdf-md';
-    aBody.innerHTML = renderMd(answer);
-    answerSection.appendChild(aLabel);
-    answerSection.appendChild(aBody);
+    // Horizontal rule
+    function hRule(color, lw, spaceAfter) {
+      needsPage(spaceAfter + 2);
+      doc.setDrawColor(...color);
+      doc.setLineWidth(lw);
+      doc.line(ML, y, PW - MR, y);
+      y += spaceAfter;
+    }
 
-    const footer = document.createElement('div');
-    footer.style.cssText = 'text-align:center;font-size:9pt;font-style:italic;color:#787878;margin-top:5px;';
-    footer.textContent = verse;
+    // Draw a markdown table (block = array of raw | lines)
+    function drawTable(block) {
+      const splitCells = row => row.trim().replace(/^\||\|$/g, '').split('|').map(c => plain(c.trim()));
+      const headers  = splitCells(block[0]);
+      const dataRows = block.slice(2).filter(r => r.trim() && !/^\|[\s\-:|]+\|$/.test(r)).map(splitCells);
+      const cols     = headers.length || 1;
+      const cw       = CW / cols;
+      const hH = 8, rH = 7, pad = 2.5;
 
-    container.appendChild(styleEl);
-    container.appendChild(header);
-    container.appendChild(makeDivider());
-    container.appendChild(questionSection);
-    container.appendChild(answerSection);
-    container.appendChild(makeDivider());
-    container.appendChild(footer);
+      needsPage(hH + dataRows.length * rH + 5);
 
-    document.body.appendChild(container);
+      // Header row
+      doc.setFillColor(235, 240, 250);
+      doc.rect(ML, y, CW, hH, 'F');
+      headers.forEach((h, ci) => {
+        doc.setDrawColor(170, 180, 205);
+        doc.setLineWidth(0.25);
+        doc.rect(ML + ci * cw, y, cw, hH);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        doc.setTextColor(...NAVY);
+        const words = doc.splitTextToSize(h, cw - pad * 2);
+        doc.text(words[0] || '', ML + ci * cw + pad, y + 5.5);
+      });
+      y += hH;
 
-    html2pdf()
-      .set({
-        margin: [15, 20],
-        filename: fileBase + '.pdf',
-        image: { type: 'jpeg', quality: 0.97 },
-        html2canvas: { scale: 2, useCORS: true, logging: false },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-      })
-      .from(container)
-      .save()
-      .finally(() => document.body.removeChild(container));
+      // Data rows
+      dataRows.forEach((row, ri) => {
+        needsPage(rH + 2);
+        if (ri % 2 === 1) {
+          doc.setFillColor(248, 249, 253);
+          doc.rect(ML, y, CW, rH, 'F');
+        }
+        row.forEach((cell, ci) => {
+          doc.setDrawColor(200, 205, 215);
+          doc.setLineWidth(0.2);
+          doc.rect(ML + ci * cw, y, cw, rH);
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(9);
+          doc.setTextColor(...DARK);
+          const words = doc.splitTextToSize(cell, cw - pad * 2);
+          doc.text(words[0] || '', ML + ci * cw + pad, y + 4.8);
+        });
+        y += rH;
+      });
+      y += 4;
+    }
+
+    // Parse raw markdown and emit jsPDF calls block by block
+    function renderMdContent(raw) {
+      const lines = raw.split('\n');
+      let i = 0;
+      while (i < lines.length) {
+        const line = lines[i];
+
+        // Blank line → small vertical gap
+        if (!line.trim()) { y += 2; i++; continue; }
+
+        // Headings
+        if (line.startsWith('# ')) {
+          y += 2;
+          textBlock(plain(line.slice(2)), { size: 15, color: NAVY, style: 'bold', leading: 7, gap: 3 });
+          i++; continue;
+        }
+        if (line.startsWith('## ')) {
+          y += 1;
+          textBlock(plain(line.slice(3)), { size: 13, color: NAVY, style: 'bold', leading: 6.5, gap: 2 });
+          i++; continue;
+        }
+        if (line.startsWith('### ')) {
+          textBlock(plain(line.slice(4)), { size: 11.5, color: NAVY, style: 'bold', leading: 6, gap: 1 });
+          i++; continue;
+        }
+
+        // Horizontal rule
+        if (/^---+$/.test(line.trim())) {
+          hRule(GOLD, 0.3, 4);
+          i++; continue;
+        }
+
+        // Table block — collect all consecutive | lines
+        if (line.trimStart().startsWith('|')) {
+          const block = [];
+          while (i < lines.length && lines[i].trimStart().startsWith('|')) { block.push(lines[i]); i++; }
+          if (block.length >= 3 && /^\|[\s\-:|]+\|/.test(block[1])) {
+            drawTable(block);
+          } else {
+            block.forEach(l => textBlock(plain(l), { size: 10.5, gap: 1 }));
+          }
+          continue;
+        }
+
+        // Blockquote
+        if (line.startsWith('> ')) {
+          needsPage(8);
+          doc.setDrawColor(...GOLD);
+          doc.setLineWidth(0.8);
+          doc.line(ML, y, ML, y + 5.5);
+          textBlock(plain(line.slice(2)), { size: 10.5, color: GREY, style: 'italic', indent: 5, gap: 1 });
+          i++; continue;
+        }
+
+        // Unordered list item
+        if (/^[*\-] /.test(line)) {
+          textBlock('- ' + plain(line.slice(2)), { size: 10.5, indent: 4, gap: 1 });
+          i++; continue;
+        }
+
+        // Ordered list item
+        if (/^\d+\. /.test(line)) {
+          const prefix = line.match(/^(\d+\.) /)[1];
+          textBlock(prefix + ' ' + plain(line.replace(/^\d+\. /, '')), { size: 10.5, indent: 4, gap: 1 });
+          i++; continue;
+        }
+
+        // Normal paragraph
+        textBlock(plain(line), { size: 11, gap: 1 });
+        i++;
+      }
+    }
+
+    // ── DOCUMENT HEADER ─────────────────────────────────
+    textBlock('Ner Derej', { size: 18, color: GOLD, style: 'bold', align: 'center', leading: 8, gap: 2 });
+    textBlock('Biblioteca Biblica Teologica', { size: 11, color: GOLD, align: 'center', leading: 6, gap: 2 });
+    textBlock(agentName, { size: 13, color: NAVY, style: 'bold', align: 'center', leading: 6, gap: 2 });
+    textBlock(dateStr, { size: 9, color: GREY, align: 'center', leading: 5, gap: 4 });
+    hRule(GOLD, 0.5, 7);
+
+    // ── QUESTION ────────────────────────────────────────
+    textBlock('PREGUNTA:', { size: 11, color: NAVY, style: 'bold', gap: 2 });
+    textBlock(question, { size: 11, gap: 6 });
+
+    // ── DIVIDER + ANSWER ────────────────────────────────
+    doc.setDrawColor(180, 185, 200);
+    doc.setLineWidth(0.2);
+    doc.line(ML, y, PW - MR, y);
+    y += 6;
+    textBlock('RESPUESTA:', { size: 11, color: NAVY, style: 'bold', gap: 4 });
+
+    renderMdContent(answer);
+
+    // ── FOOTER ──────────────────────────────────────────
+    needsPage(14);
+    hRule(GOLD, 0.4, 5);
+    textBlock(verse, { size: 9, color: GREY, style: 'italic', align: 'center', leading: 5, gap: 0 });
+
+    doc.save(fileBase + '.pdf');
   }
 
   async function downloadWord() {
