@@ -556,12 +556,19 @@ button { font-family: inherit; cursor: pointer; }
 .msg-body p:last-child { margin-bottom: 0; }
 .msg-body strong { font-weight: 600; color: var(--text-w); }
 .msg-body em { font-style: italic; }
-.msg-body h1,.msg-body h2,.msg-body h3 { font-family: 'Playfair Display', serif; color: var(--gold); margin: 10px 0 5px; }
+.msg-body h1,.msg-body h2,.msg-body h3 { font-family: 'Inter', sans-serif; font-weight: 700; color: var(--gold); margin: 12px 0 5px; }
+.msg-body h1 { font-size: 17px; }
+.msg-body h2 { font-size: 15px; }
+.msg-body h3 { font-size: 13.5px; }
 .msg-body ul,.msg-body ol { padding-left: 18px; margin-bottom: 7px; }
 .msg-body li { margin-bottom: 3px; }
 .msg-body blockquote { border-left: 3px solid var(--gold); padding-left: 11px; color: var(--text-md); font-style: italic; margin: 7px 0; }
 .msg-body code { background: rgba(255,255,255,.08); padding: 1px 6px; border-radius: 4px; font-size: 12px; font-family: monospace; }
 .msg-body hr { border: none; border-top: 1px solid var(--border); margin: 10px 0; }
+.msg-body table { border-collapse: collapse; width: 100%; margin: 8px 0 10px; font-size: 13px; }
+.msg-body th, .msg-body td { border: 1px solid var(--border); padding: 6px 10px; text-align: left; }
+.msg-body th { background: rgba(201,162,39,.12); color: var(--gold); font-weight: 600; }
+.msg-body tr:nth-child(even) td { background: rgba(255,255,255,.03); }
 
 .typing { display: flex; gap: 9px; align-items: flex-end; }
 .typing-dots {
@@ -889,7 +896,7 @@ button { font-family: inherit; cursor: pointer; }
 <div class="toast" id="toast"></div>
 
 <!-- ── LIBRARIES ── -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.min.js"></script>
 
 <!-- ═══════════════════════════════════════════════════
@@ -1263,10 +1270,20 @@ function renderMd(t) {
     const items = m.trim().split('\n').map(l => `<li>${l.replace(/^\d+\. /,'')}</li>`).join('');
     return `<ol>${items}</ol>`;
   });
+  s = s.replace(/((?:^\|[^\n]+\n?)+)/gm, block => {
+    const rows = block.trim().split('\n').filter(r => r.trim());
+    if (rows.length < 2 || !/^\|[\s\-:|]+\|/.test(rows[1])) return block;
+    const cells = row => row.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim());
+    const headers = cells(rows[0]).map(h => `<th>${h}</th>`).join('');
+    const body = rows.slice(2).filter(r => r.trim()).map(r =>
+      `<tr>${cells(r).map(c => `<td>${c}</td>`).join('')}</tr>`
+    ).join('');
+    return `<table><thead><tr>${headers}</tr></thead><tbody>${body}</tbody></table>`;
+  });
   s = s.split(/\n{2,}/).map(p => {
     p = p.trim();
     if (!p) return '';
-    if (/^<(h[1-6]|ul|ol|blockquote|pre|hr)/.test(p)) return p;
+    if (/^<(h[1-6]|ul|ol|blockquote|pre|hr|table)/.test(p)) return p;
     return `<p>${p.replace(/\n/g,'<br>')}</p>`;
   }).join('');
   return s;
@@ -1394,62 +1411,103 @@ function addDownloadButton(msgEl, question, answer) {
   }
 
   function downloadPdf() {
-    if (!window.jspdf) { showToast('jsPDF aún no cargado. Intenta en un momento.'); return; }
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
-    const W = doc.internal.pageSize.getWidth();
-    const margin = 20;
-    const maxW = W - margin * 2;
-    let y = 22;
+    if (typeof html2pdf === 'undefined') { showToast('html2pdf aún no cargado. Intenta en un momento.'); return; }
 
-    const gold = [201, 162, 39];
-    const navy = [27, 58, 107];
-    const grey = [120, 120, 120];
-    const dark = [40, 40, 40];
+    // Container that the browser will render (html2canvas takes a screenshot of it)
+    const container = document.createElement('div');
+    container.style.cssText = [
+      'width:170mm',
+      'padding:0',
+      'font-family:Inter,sans-serif',
+      'font-size:11pt',
+      'color:#282828',
+      'background:#ffffff',
+      'line-height:1.55',
+      'box-sizing:border-box',
+      'position:absolute',
+      'left:-9999px',
+      'top:0',
+    ].join(';');
 
-    function addLine(text, opts) {
-      const { size = 11, color = dark, bold = false, align = 'left', gap = 6 } = opts || {};
-      doc.setFont('helvetica', bold ? 'bold' : 'normal');
-      doc.setFontSize(size);
-      doc.setTextColor(...color);
-      const x = align === 'center' ? W / 2 : margin;
-      const lines = doc.splitTextToSize(text, maxW);
-      lines.forEach(line => {
-        if (y > 275) { doc.addPage(); y = 20; }
-        doc.text(line, x, y, { align });
-        y += gap;
-      });
+    // Scoped styles for rendered markdown inside the PDF
+    const styleEl = document.createElement('style');
+    styleEl.textContent = `
+      .pdf-md h1,.pdf-md h2,.pdf-md h3{color:#1B3A6B;font-family:Inter,sans-serif;font-weight:700;margin:10px 0 5px;}
+      .pdf-md h1{font-size:14pt;}.pdf-md h2{font-size:12pt;}.pdf-md h3{font-size:11pt;}
+      .pdf-md p{margin:0 0 7px;}
+      .pdf-md strong{font-weight:700;}
+      .pdf-md em{font-style:italic;}
+      .pdf-md ul,.pdf-md ol{padding-left:18px;margin:0 0 7px;}
+      .pdf-md li{margin-bottom:3px;}
+      .pdf-md blockquote{border-left:3px solid #C9A227;padding-left:10px;color:#555;font-style:italic;margin:7px 0;}
+      .pdf-md code{background:#f0f0f0;padding:1px 5px;border-radius:3px;font-size:9.5pt;font-family:monospace;}
+      .pdf-md pre{background:#f0f0f0;padding:8px;border-radius:4px;white-space:pre-wrap;overflow-wrap:break-word;}
+      .pdf-md table{border-collapse:collapse;width:100%;margin-bottom:10px;}
+      .pdf-md th,.pdf-md td{border:1px solid #ccc;padding:5px 8px;font-size:9.5pt;text-align:left;}
+      .pdf-md th{background:#f0f0f0;font-weight:700;}
+      .pdf-md hr{border:none;border-top:1px solid #ccc;margin:8px 0;}
+    `;
+
+    function makeDivider() {
+      const d = document.createElement('div');
+      d.style.cssText = 'border-top:1.5px solid #C9A227;margin:10px 0;';
+      return d;
     }
 
-    addLine('+ Ner Derej +', { size: 18, color: gold, bold: true, align: 'center', gap: 8 });
-    addLine('Biblioteca Biblica Teologica', { size: 12, color: gold, align: 'center', gap: 7 });
-    addLine(agentName, { size: 13, color: navy, bold: true, align: 'center', gap: 7 });
-    addLine(dateStr, { size: 10, color: grey, align: 'center', gap: 10 });
+    const header = document.createElement('div');
+    header.style.cssText = 'text-align:center;margin-bottom:14px;';
+    header.innerHTML =
+      '<div style="font-size:20pt;font-weight:bold;color:#C9A227;">✡ Ner Derej ✡</div>' +
+      '<div style="font-size:11pt;color:#C9A227;margin-top:3px;">Biblioteca Bíblica Teológica</div>' +
+      '<div style="font-size:12pt;font-weight:bold;color:#1B3A6B;margin-top:5px;">' + escHtml(agentName) + '</div>' +
+      '<div style="font-size:9.5pt;color:#787878;margin-top:3px;">' + dateStr + '</div>';
 
-    doc.setDrawColor(...gold);
-    doc.setLineWidth(0.5);
-    doc.line(margin, y, W - margin, y);
-    y += 8;
+    const questionSection = document.createElement('div');
+    questionSection.style.marginBottom = '10px';
+    const qLabel = document.createElement('div');
+    qLabel.style.cssText = 'font-size:10.5pt;font-weight:bold;color:#1B3A6B;margin-bottom:4px;';
+    qLabel.textContent = 'PREGUNTA:';
+    const qText = document.createElement('div');
+    qText.style.fontSize = '10.5pt';
+    qText.textContent = question;
+    questionSection.appendChild(qLabel);
+    questionSection.appendChild(qText);
 
-    addLine('PREGUNTA:', { size: 11, color: navy, bold: true, gap: 6 });
-    addLine(question, { size: 11, color: dark, gap: 6 });
-    y += 4;
+    const answerSection = document.createElement('div');
+    const aLabel = document.createElement('div');
+    aLabel.style.cssText = 'font-size:10.5pt;font-weight:bold;color:#1B3A6B;margin-bottom:5px;';
+    aLabel.textContent = 'RESPUESTA:';
+    const aBody = document.createElement('div');
+    aBody.className = 'pdf-md';
+    aBody.innerHTML = renderMd(answer);
+    answerSection.appendChild(aLabel);
+    answerSection.appendChild(aBody);
 
-    addLine('RESPUESTA:', { size: 11, color: navy, bold: true, gap: 6 });
-    addLine(stripToPlain(answer), { size: 11, color: dark, gap: 5.8 });
-    y += 8;
+    const footer = document.createElement('div');
+    footer.style.cssText = 'text-align:center;font-size:9pt;font-style:italic;color:#787878;margin-top:5px;';
+    footer.textContent = verse;
 
-    if (y > 260) { doc.addPage(); y = 20; }
-    doc.setDrawColor(...gold);
-    doc.line(margin, y, W - margin, y);
-    y += 7;
-    doc.setFont('helvetica', 'italic');
-    doc.setFontSize(9.5);
-    doc.setTextColor(...grey);
-    const vLines = doc.splitTextToSize(verse, maxW);
-    doc.text(vLines, W / 2, y, { align: 'center' });
+    container.appendChild(styleEl);
+    container.appendChild(header);
+    container.appendChild(makeDivider());
+    container.appendChild(questionSection);
+    container.appendChild(answerSection);
+    container.appendChild(makeDivider());
+    container.appendChild(footer);
 
-    doc.save(fileBase + '.pdf');
+    document.body.appendChild(container);
+
+    html2pdf()
+      .set({
+        margin: [15, 20],
+        filename: fileBase + '.pdf',
+        image: { type: 'jpeg', quality: 0.97 },
+        html2canvas: { scale: 2, useCORS: true, logging: false },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      })
+      .from(container)
+      .save()
+      .finally(() => document.body.removeChild(container));
   }
 
   async function downloadWord() {
