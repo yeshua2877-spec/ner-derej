@@ -224,6 +224,83 @@ button { font-family: inherit; cursor: pointer; }
   gap: 9px;
 }
 
+/* ─── COORDINADOR (punto de entrada) ─────────────────── */
+.coord-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  text-align: left;
+  background: linear-gradient(120deg, rgba(201,162,39,.16), rgba(201,162,39,.05));
+  border: 1px solid rgba(201,162,39,.45);
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin-bottom: 16px;
+  cursor: pointer;
+  transition: all .2s;
+}
+.coord-banner:hover {
+  border-color: var(--gold);
+  background: linear-gradient(120deg, rgba(201,162,39,.24), rgba(201,162,39,.08));
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(201,162,39,.18);
+}
+.coord-banner-icon {
+  width: 44px; height: 44px; flex-shrink: 0;
+  border-radius: 11px;
+  background: var(--gold);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Playfair Display', serif;
+  font-size: 16px; font-weight: 700; color: #1a1407;
+}
+.coord-banner-txt { display: flex; flex-direction: column; gap: 2px; }
+.coord-banner-name {
+  font-family: 'Playfair Display', serif;
+  font-size: 15px; font-weight: 700; color: var(--gold);
+  letter-spacing: .5px;
+}
+.coord-banner-sub { font-size: 11.5px; color: var(--text-w); }
+.coord-banner-tag {
+  margin-left: auto; flex-shrink: 0;
+  font-size: 8.5px; font-weight: 700; letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--gold);
+  border: 1px solid rgba(201,162,39,.45);
+  border-radius: 20px; padding: 4px 10px;
+}
+
+.sb-agent-btn.coordinator {
+  border-left-color: rgba(201,162,39,.45);
+  color: var(--gold);
+  font-weight: 600;
+}
+.sb-agent-btn.coordinator .sb-agent-icon { background: var(--gold) !important; color: #1a1407; }
+.sb-coord-sep {
+  height: 1px; margin: 6px 14px 8px;
+  background: rgba(255,255,255,.08);
+}
+.routing-note {
+  display: flex; align-items: center; justify-content: center;
+  flex-wrap: wrap; gap: 7px;
+  margin: 10px auto 14px;
+  font-size: 12px; color: var(--text-muted);
+  font-style: italic;
+}
+.routing-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-style: normal; font-weight: 600; font-size: 11.5px;
+  color: var(--rc, var(--gold));
+  background: rgba(255,255,255,.05);
+  border: 1px solid var(--rc, var(--gold));
+  border-radius: 20px; padding: 3px 11px 3px 4px;
+}
+.routing-pill-ic {
+  width: 20px; height: 20px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-family: 'Playfair Display', serif;
+  font-size: 8.5px; font-weight: 700; color: #fff;
+}
+
 /* ─── AGENT CARD ─────────────────────────────────────── */
 .card {
   background: var(--bg-card);
@@ -820,7 +897,9 @@ button { font-family: inherit; cursor: pointer; }
 
     <!-- Agents Grid -->
     <section class="agents-sec">
-      <div class="sec-label">Selecciona un agente para iniciar consulta</div>
+      <div class="sec-label">¿No sabes qué agente elegir? Empieza aquí</div>
+      <div id="coordSlot"></div>
+      <div class="sec-label">O selecciona un agente para iniciar consulta</div>
       <div class="grid" id="grid"></div>
     </section>
 
@@ -970,13 +1049,49 @@ const AGENTS = [
     tips:['¿Qué dice la Biblia sobre la sanidad divina?','¿Cómo orar por los enfermos de manera bíblica?','¿Cómo ministrar restauración a alguien profundamente herido?'] },
 ];
 
+/* ── COORDINADOR (punto de entrada / enrutador) ─────── */
+const COORDINATOR = {
+  id:'COORDINADOR', name:'COORDINADOR', sub:'Te derivo al agente indicado',
+  icon:'CO', col:'#C9A227',
+  desc:'¿No sabes qué agente elegir? Escribe tu pregunta y el Coordinador la analiza, identifica al especialista más apropiado entre los 21 agentes y te deriva a él para que te responda con su especialidad.',
+  tips:['¿Cómo ayudo a mi hijo adolescente que está alejándose de la fe?','¿Qué dice la Biblia sobre el manejo del dinero en la familia?','Tengo ansiedad y no sé cómo enfrentarla desde la fe'] };
+
 /* ── STATE ──────────────────────────────────────────── */
 let current = null;
 let history = [];
 let busy    = false;
 
+/* ── BUILD COORDINADOR ENTRY ────────────────────────── */
+const coordSlot = document.getElementById('coordSlot');
+const coordBanner = document.createElement('button');
+coordBanner.className = 'coord-banner';
+coordBanner.id = 'coord-banner';
+coordBanner.innerHTML = `
+  <span class="coord-banner-icon">${COORDINATOR.icon}</span>
+  <span class="coord-banner-txt">
+    <span class="coord-banner-name">COORDINADOR</span>
+    <span class="coord-banner-sub">Escribe tu pregunta y te derivo al agente más apropiado</span>
+  </span>
+  <span class="coord-banner-tag">Empieza aquí</span>
+`;
+coordBanner.onclick = () => openAgent(COORDINATOR);
+coordSlot.appendChild(coordBanner);
+
 /* ── BUILD SIDEBAR ──────────────────────────────────── */
 const sbList = document.getElementById('sbList');
+const sbCoord = document.createElement('button');
+sbCoord.className = 'sb-agent-btn coordinator';
+sbCoord.id = 'sb-' + COORDINATOR.id;
+sbCoord.innerHTML = `
+  <span class="sb-agent-icon" style="background:${COORDINATOR.col}">${COORDINATOR.icon}</span>
+  <span class="sb-agent-name">COORDINADOR</span>
+`;
+sbCoord.onclick = () => openAgent(COORDINATOR);
+sbList.appendChild(sbCoord);
+const sbSep = document.createElement('div');
+sbSep.className = 'sb-coord-sep';
+sbList.appendChild(sbSep);
+
 AGENTS.forEach(a => {
   const btn = document.createElement('button');
   btn.className = 'sb-agent-btn';
@@ -1081,6 +1196,8 @@ async function send() {
   const txt = inp.value.trim();
   if (!txt) return;
 
+  if (current.id === 'COORDINADOR') { return sendCoordinator(txt); }
+
   inp.value = '';
   inp.style.height = 'auto';
   document.getElementById('sendBtn').disabled = true;
@@ -1166,10 +1283,126 @@ async function send() {
   }
 }
 
+/* ── COORDINADOR: clasifica y deriva ────────────────── */
+function addRoutingNote(agentObj) {
+  const msgs = document.getElementById('chatMsgs');
+  const wl = msgs.querySelector('.welcome-msg');
+  if (wl) wl.remove();
+  const div = document.createElement('div');
+  div.className = 'routing-note';
+  div.innerHTML = `Te derivo al agente
+    <span class="routing-pill" style="--rc:${agentObj.col}">
+      <span class="routing-pill-ic" style="background:${agentObj.col}">${agentObj.icon}</span>
+      ${escHtml(agentObj.name)}
+    </span>`;
+  msgs.appendChild(div);
+  scrollBottom();
+}
+
+async function sendCoordinator(txt) {
+  const inp = document.getElementById('chatInp');
+  inp.value = '';
+  inp.style.height = 'auto';
+  document.getElementById('sendBtn').disabled = true;
+  busy = true;
+
+  addMsg('user', txt);
+  const baseMsgs = [...history, { role: 'user', content: txt }];
+  const typId = addTyping();
+  scrollBottom();
+
+  let full = '';
+  let msgEl = null;
+
+  try {
+    // PASO 1 — Clasificación
+    const cls = await fetch('/api/classify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question: txt })
+    });
+    if (!cls.ok) {
+      const err = await cls.json().catch(() => ({}));
+      removeEl(typId);
+      addMsg('agent', '⚠ ' + (err.error || 'No se pudo determinar el agente.'), COORDINATOR);
+      return;
+    }
+    const { agent_id } = await cls.json();
+    const agentObj = AGENTS.find(a => a.id === agent_id) || AGENTS[0];
+
+    removeEl(typId);
+    addRoutingNote(agentObj);
+
+    // PASO 2 — Respuesta con el system prompt del agente derivado
+    const typ2 = addTyping();
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ agent_id: agentObj.id, messages: baseMsgs })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      removeEl(typ2);
+      addMsg('agent', '⚠ ' + (err.error || 'Error al conectar con el agente.'), agentObj);
+      return;
+    }
+
+    const reader = res.body.getReader();
+    const dec = new TextDecoder();
+    let buf = '';
+    removeEl(typ2);
+    msgEl = addMsg('agent', '', agentObj);
+
+    let doneStreaming = false;
+    while (!doneStreaming) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const raw = line.slice(6).trim();
+        if (raw === '[DONE]') { doneStreaming = true; break; }
+        let d;
+        try { d = JSON.parse(raw); } catch { continue; }
+        if (d.error) {
+          full = '⚠ ' + d.error;
+          setMsgBody(msgEl, full);
+          doneStreaming = true;
+          break;
+        }
+        if (d.text) {
+          full += d.text;
+          setMsgBody(msgEl, full);
+          scrollBottom();
+        }
+      }
+    }
+
+    if (full) setMsgBody(msgEl, full);
+    history = [...baseMsgs, { role: 'assistant', content: full }];
+
+    if (agentObj.id === 'MELODIA') addSunoButton(msgEl, full);
+    if (full && msgEl) addDownloadButton(msgEl, txt, full, agentObj);
+
+  } catch (err) {
+    removeEl(typId);
+    if (msgEl) removeEl(msgEl.id);
+    addMsg('agent', '⚠ Error de conexión. Verifica que el servidor esté corriendo.', COORDINATOR);
+    showToast('Error de conexión con el servidor.');
+  } finally {
+    busy = false;
+    document.getElementById('sendBtn').disabled = false;
+    inp.focus();
+  }
+}
+
 /* ── MESSAGE HELPERS ────────────────────────────────── */
 let msgCnt = 0;
 
-function addMsg(role, text) {
+function addMsg(role, text, agentObj) {
+  const ag = agentObj || current;
   const id = 'msg-' + (++msgCnt);
   const msgs = document.getElementById('chatMsgs');
   const isUser = role === 'user';
@@ -1187,8 +1420,8 @@ function addMsg(role, text) {
     av.textContent = 'Tú';
     av.style.cssText = 'background:#6B2EC1;color:#fff;font-family:Inter,sans-serif;font-size:10px';
   } else {
-    av.textContent = current ? current.icon : '?';
-    av.style.cssText = `background:${current ? current.col : '#1B3A6B'};color:#fff`;
+    av.textContent = ag ? ag.icon : '?';
+    av.style.cssText = `background:${ag ? ag.col : '#1B3A6B'};color:#fff`;
   }
 
   const body = document.createElement('div');
@@ -1340,8 +1573,9 @@ function addSunoButton(msgEl, fullText) {
 }
 
 /* ── DOWNLOAD BUTTON ────────────────────────────────── */
-function addDownloadButton(msgEl, question, answer) {
-  const agentName = current ? current.name : 'Agente';
+function addDownloadButton(msgEl, question, answer, agentObj) {
+  const ag = agentObj || current;
+  const agentName = ag ? ag.name : 'Agente';
   const today = new Date();
   const dateStr = today.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
   const fileDateStr = today.toISOString().slice(0, 10).replace(/-/g, '');
