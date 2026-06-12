@@ -740,9 +740,85 @@ Las tablas deben estar bien formadas con separadores completos en cada columna.
 5. LISTAS CON FORMATO LIMPIO: Las listas de items usan guiones simples (-) para contenido no ordenado y numeracion (1., 2., 3.) para secuencias ordenadas. Sin viñetas decorativas."""
 
 
+# ─────────────────────────────────────────────────────────────
+# MODO COORDINADOR
+# Catálogo conciso de áreas de especialidad usado SOLO para el paso
+# de clasificación (enrutamiento). No duplica los system prompts:
+# la respuesta final siempre usa AGENTS[id]["system_prompt"].
+# ─────────────────────────────────────────────────────────────
+AGENT_AREAS = {
+    "LOGOS": "TEXTO BÍBLICO E IDIOMAS — exégesis, hebreo/arameo/griego, hermenéutica, crítica textual, teología sistemática y bíblica, Sola Scriptura.",
+    "DOXA": "TEOLOGÍA — gloria de Dios, adoración en espíritu y verdad, eclesiología, ordenanzas (Bautismo y Santa Cena), apologética y filosofía cristiana.",
+    "LITERARIO": "LITERATURA — géneros bíblicos, poesía hebrea, narrativa, retórica, quiasmos, apócrifos y literatura del mundo bíblico (Qumrán, pseudoepígrafos), canon.",
+    "HISTORIA": "HISTORIA — historia de Israel, período intertestamentario, iglesia primitiva y patrística, edad media, Reforma protestante e historia contemporánea de la iglesia.",
+    "TOPOS": "GEOGRAFÍA — geografía de Tierra Santa, lugares y rutas bíblicas, arqueología, contexto geográfico de los textos.",
+    "DIDASKALOS": "MINISTERIO Y EDUCACIÓN — didáctica bíblica, discipulado, metodologías de enseñanza, misionología, evangelismo y plantación de iglesias.",
+    "POIMEN": "PASTORAL Y CONSEJERÍA — cura de almas, consejería pastoral, duelo, visita a enfermos, predicación y homilética, conflictos y abuso pastoral.",
+    "LATREIA": "LITURGIA — orden de culto bíblico, liturgia reformada, principio regulativo, sacramentos, año litúrgico.",
+    "MELODIA": "MÚSICA — himnología, música sacra, los Salmos, evaluación teológica de la música, composición de canciones de alabanza.",
+    "MICROS": "NIÑOS — ministerio infantil de 4 a 10 años, escuela dominical, pedagogía y enseñanza bíblica para niños, familia.",
+    "NEOS": "PREADOLESCENTES — acompañamiento de chicos de 11 a 14 años, identidad y fe en transición, pubertad, presión social.",
+    "EPHEBOS": "ADOLESCENTES — ministerio juvenil de 12 a 17 años, identidad cristiana, redes sociales, desafíos contemporáneos de la adolescencia.",
+    "NEANIAS": "JÓVENES — jóvenes adultos de 18 a 30 años, vocación, noviazgo y soltería, fe en la universidad, trabajo y finanzas personales.",
+    "PRESBUTEROS": "ADULTOS MAYORES — tercera edad, acompañamiento del anciano, soledad y duelo, legado espiritual, oficio de anciano y gobierno eclesiástico.",
+    "OIKOS": "FAMILIA Y MATRIMONIO — hogar cristiano, matrimonio, crianza, sexualidad conyugal, pornografía, violencia doméstica.",
+    "PSYCHE": "PSICOLOGÍA CRISTIANA — salud mental, consejería, corrientes psicológicas, ansiedad/depresión/trauma, identidad, sexo y género.",
+    "TEKTON": "TECNOLOGÍA — tecnología y fe, seguridad digital, adicciones digitales, IA, ciberacoso/grooming, fake news y desinformación.",
+    "OIKONOMOS": "FINANZAS Y GESTIÓN — mayordomía bíblica, finanzas personales y de la iglesia, diezmo y ofrendas, administración y transparencia.",
+    "SOMA": "EDUCACIÓN FÍSICA — el cuerpo como templo, nutrición, descanso/Sabbat, ejercicio, salud física y su relación con lo espiritual.",
+    "ARCHE": "LIDERAZGO MINISTERIAL — liderazgo siervo, gobierno eclesiástico, formación y sucesión de líderes, cultura organizacional sana.",
+    "IAMA": "SANIDAD INTEGRAL — teología de la sanidad divina, oración por los enfermos, restauración emocional y espiritual, pastoral del sufrimiento.",
+}
+
+CLASSIFIER_SYSTEM = (
+    "Eres el COORDINADOR de NER DEREJ, un sistema de consulta teológica con 21 agentes "
+    "especializados. Tu única tarea es leer la pregunta del usuario y decidir cuál de los "
+    "agentes es el más apropiado para responderla.\n\n"
+    "AGENTES DISPONIBLES (identificador — área de especialidad):\n"
+    + "\n".join(f"{aid} — {area}" for aid, area in AGENT_AREAS.items())
+    + "\n\nResponde ÚNICAMENTE con el identificador exacto del agente más apropiado "
+    "(una sola palabra en MAYÚSCULAS, tal cual aparece en la lista). "
+    "No agregues explicación, puntuación, comillas ni ningún otro texto. "
+    "Si ninguno encaja con claridad, responde LOGOS."
+)
+
+
 @app.route("/")
 def index():
     return send_from_directory(".", "index.html")
+
+
+@app.route("/api/classify", methods=["POST"])
+def classify():
+    if not client:
+        return jsonify({"error": "ANTHROPIC_API_KEY no está configurada."}), 500
+
+    data = request.get_json()
+    question = (data or {}).get("question", "").strip()
+    if not question:
+        return jsonify({"error": "No hay pregunta para clasificar"}), 400
+
+    try:
+        resp = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=16,
+            system=[
+                {
+                    "type": "text",
+                    "text": CLASSIFIER_SYSTEM,
+                    "cache_control": {"type": "ephemeral"},
+                }
+            ],
+            messages=[{"role": "user", "content": question}],
+        )
+        raw = (resp.content[0].text or "").strip().upper()
+        # Tolerancia: si el modelo agrega algo, extraemos el primer id válido
+        agent_id = next((aid for aid in AGENT_AREAS if aid in raw), "LOGOS")
+        return jsonify({"agent_id": agent_id})
+    except anthropic.AuthenticationError:
+        return jsonify({"error": "API key inválida. Verifica tu ANTHROPIC_API_KEY."}), 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/api/health")
