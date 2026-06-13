@@ -1,9 +1,10 @@
 import os
 import json
+import threading
+from datetime import date
 from flask import Flask, request, jsonify, send_from_directory, Response, stream_with_context
 from flask_cors import CORS
-import groq
-from groq import Groq
+import anthropic
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -11,8 +12,8 @@ load_dotenv()
 app = Flask(__name__, static_folder="static")
 CORS(app)
 
-api_key = os.environ.get("GROQ_API_KEY")
-client = Groq(api_key=api_key) if api_key else None
+api_key = os.environ.get("ANTHROPIC_API_KEY")
+client = anthropic.Anthropic(api_key=api_key) if api_key else None
 
 AGENTS = {
     "LOGOS": {
@@ -784,6 +785,40 @@ CLASSIFIER_SYSTEM = (
 )
 
 
+# ─────────────────────────────────────────────────────────────
+# REGISTRO DE USO DIARIO
+# ─────────────────────────────────────────────────────────────
+USAGE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "usage_stats.json")
+_usage_lock = threading.Lock()
+
+_PRICING = {
+    "claude-sonnet-4-6":        {"input": 3.00,  "output": 15.00},
+    "claude-haiku-4-5-20251001": {"input": 0.80,  "output":  4.00},
+}
+
+def log_usage(input_tokens, output_tokens, model, count_question=False):
+    today = date.today().isoformat()
+    p = _PRICING.get(model, {"input": 0.0, "output": 0.0})
+    cost = (input_tokens / 1_000_000) * p["input"] + (output_tokens / 1_000_000) * p["output"]
+
+    with _usage_lock:
+        try:
+            with open(USAGE_FILE, "r", encoding="utf-8") as f:
+                stats = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            stats = {}
+
+        day = stats.setdefault(today, {"questions": 0, "input_tokens": 0, "output_tokens": 0, "cost_usd": 0.0})
+        if count_question:
+            day["questions"] += 1
+        day["input_tokens"] += input_tokens
+        day["output_tokens"] += output_tokens
+        day["cost_usd"] = round(day["cost_usd"] + cost, 6)
+
+        with open(USAGE_FILE, "w", encoding="utf-8") as f:
+            json.dump(stats, f, indent=2, ensure_ascii=False)
+
+
 @app.route("/")
 def index():
     return send_from_directory(".", "index.html")
@@ -792,7 +827,7 @@ def index():
 @app.route("/api/classify", methods=["POST"])
 def classify():
     if not client:
-        return jsonify({"error": "GROQ_API_KEY no está configurada."}), 500
+        return jsonify({"error": "ANTHROPIC_API_KEY no está configurada."}), 500
 
     data = request.get_json()
     question = (data or {}).get("question", "").strip()
@@ -800,20 +835,25 @@ def classify():
         return jsonify({"error": "No hay pregunta para clasificar"}), 400
 
     try:
-        resp = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+        resp = client.messages.create(
+            model="claude-haiku-4-5-20251001",
             max_tokens=16,
-            messages=[
-                {"role": "system", "content": CLASSIFIER_SYSTEM},
-                {"role": "user", "content": question},
+            system=[
+                {
+                    "type": "text",
+                    "text": CLASSIFIER_SYSTEM,
+                    "cache_control": {"type": "ephemeral"},
+                }
             ],
+            messages=[{"role": "user", "content": question}],
         )
-        raw = (resp.choices[0].message.content or "").strip().upper()
+        raw = (resp.content[0].text or "").strip().upper()
         # Tolerancia: si el modelo agrega algo, extraemos el primer id válido
         agent_id = next((aid for aid in AGENT_AREAS if aid in raw), "LOGOS")
+        log_usage(resp.usage.input_tokens, resp.usage.output_tokens, "claude-haiku-4-5-20251001")
         return jsonify({"agent_id": agent_id})
-    except groq.AuthenticationError:
-        return jsonify({"error": "API key inválida. Verifica tu GROQ_API_KEY."}), 500
+    except anthropic.AuthenticationError:
+        return jsonify({"error": "API key inválida. Verifica tu ANTHROPIC_API_KEY."}), 500
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -823,10 +863,20 @@ def health():
     return jsonify({"status": "ok", "api_configured": bool(client), "agents": len(AGENTS)})
 
 
+@app.route("/api/usage")
+def usage_stats():
+    try:
+        with open(USAGE_FILE, "r", encoding="utf-8") as f:
+            stats = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        stats = {}
+    return jsonify(stats)
+
+
 @app.route("/api/chat", methods=["POST"])
 def chat():
     if not client:
-        return jsonify({"error": "GROQ_API_KEY no está configurada. Crea un archivo .env con tu clave."}), 500
+        return jsonify({"error": "ANTHROPIC_API_KEY no está configurada. Crea un archivo .env con tu clave."}), 500
 
     data = request.get_json()
     if not data:
@@ -844,22 +894,30 @@ def chat():
 
     def generate():
         try:
-            stream = client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
+            with client.messages.stream(
+                model="claude-sonnet-4-6",
                 max_tokens=8192,
-                messages=[
-                    {"role": "system", "content": agent["system_prompt"] + ACADEMIC_RULES},
-                    *messages,
+                system=[
+                    {
+                        "type": "text",
+                        "text": agent["system_prompt"] + ACADEMIC_RULES,
+                        "cache_control": {"type": "ephemeral"},
+                    }
                 ],
-                stream=True,
-            )
-            for chunk in stream:
-                text = chunk.choices[0].delta.content
-                if text:
+                messages=messages,
+            ) as stream:
+                for text in stream.text_stream:
                     yield f"data: {json.dumps({'text': text})}\n\n"
+                final = stream.get_final_message()
+                log_usage(
+                    final.usage.input_tokens,
+                    final.usage.output_tokens,
+                    "claude-sonnet-4-6",
+                    count_question=True,
+                )
             yield "data: [DONE]\n\n"
-        except groq.AuthenticationError:
-            yield f"data: {json.dumps({'error': 'API key inválida. Verifica tu GROQ_API_KEY.'})}\n\n"
+        except anthropic.AuthenticationError:
+            yield f"data: {json.dumps({'error': 'API key inválida. Verifica tu ANTHROPIC_API_KEY.'})}\n\n"
             yield "data: [DONE]\n\n"
         except Exception as e:
             yield f"data: {json.dumps({'error': str(e)})}\n\n"
@@ -882,7 +940,7 @@ if __name__ == "__main__":
     print(f"\n✦ NER DEREJ · נֵר דֶּרֶךְ")
     print(f"  Servidor corriendo en http://localhost:{port}")
     if not api_key:
-        print("  ⚠  GROQ_API_KEY no encontrada — crea un archivo .env")
+        print("  ⚠  ANTHROPIC_API_KEY no encontrada — crea un archivo .env")
     else:
         print(f"  ✓  API configurada · {len(AGENTS)} agentes listos")
     print()
