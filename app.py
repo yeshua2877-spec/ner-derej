@@ -2,7 +2,8 @@ import os
 import json
 from flask import Flask, request, jsonify, send_from_directory, Response, stream_with_context
 from flask_cors import CORS
-import anthropic
+import groq
+from groq import Groq
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -10,8 +11,8 @@ load_dotenv()
 app = Flask(__name__, static_folder="static")
 CORS(app)
 
-api_key = os.environ.get("ANTHROPIC_API_KEY")
-client = anthropic.Anthropic(api_key=api_key) if api_key else None
+api_key = os.environ.get("GROQ_API_KEY")
+client = Groq(api_key=api_key) if api_key else None
 
 AGENTS = {
     "LOGOS": {
@@ -791,7 +792,7 @@ def index():
 @app.route("/api/classify", methods=["POST"])
 def classify():
     if not client:
-        return jsonify({"error": "ANTHROPIC_API_KEY no está configurada."}), 500
+        return jsonify({"error": "GROQ_API_KEY no está configurada."}), 500
 
     data = request.get_json()
     question = (data or {}).get("question", "").strip()
@@ -799,24 +800,20 @@ def classify():
         return jsonify({"error": "No hay pregunta para clasificar"}), 400
 
     try:
-        resp = client.messages.create(
-            model="claude-haiku-4-5-20251001",
+        resp = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
             max_tokens=16,
-            system=[
-                {
-                    "type": "text",
-                    "text": CLASSIFIER_SYSTEM,
-                    "cache_control": {"type": "ephemeral"},
-                }
+            messages=[
+                {"role": "system", "content": CLASSIFIER_SYSTEM},
+                {"role": "user", "content": question},
             ],
-            messages=[{"role": "user", "content": question}],
         )
-        raw = (resp.content[0].text or "").strip().upper()
+        raw = (resp.choices[0].message.content or "").strip().upper()
         # Tolerancia: si el modelo agrega algo, extraemos el primer id válido
         agent_id = next((aid for aid in AGENT_AREAS if aid in raw), "LOGOS")
         return jsonify({"agent_id": agent_id})
-    except anthropic.AuthenticationError:
-        return jsonify({"error": "API key inválida. Verifica tu ANTHROPIC_API_KEY."}), 500
+    except groq.AuthenticationError:
+        return jsonify({"error": "API key inválida. Verifica tu GROQ_API_KEY."}), 500
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -829,7 +826,7 @@ def health():
 @app.route("/api/chat", methods=["POST"])
 def chat():
     if not client:
-        return jsonify({"error": "ANTHROPIC_API_KEY no está configurada. Crea un archivo .env con tu clave."}), 500
+        return jsonify({"error": "GROQ_API_KEY no está configurada. Crea un archivo .env con tu clave."}), 500
 
     data = request.get_json()
     if not data:
@@ -847,23 +844,22 @@ def chat():
 
     def generate():
         try:
-            with client.messages.stream(
-                model="claude-sonnet-4-6",
+            stream = client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
                 max_tokens=8192,
-                system=[
-                    {
-                        "type": "text",
-                        "text": agent["system_prompt"] + ACADEMIC_RULES,
-                        "cache_control": {"type": "ephemeral"},
-                    }
+                messages=[
+                    {"role": "system", "content": agent["system_prompt"] + ACADEMIC_RULES},
+                    *messages,
                 ],
-                messages=messages,
-            ) as stream:
-                for text in stream.text_stream:
+                stream=True,
+            )
+            for chunk in stream:
+                text = chunk.choices[0].delta.content
+                if text:
                     yield f"data: {json.dumps({'text': text})}\n\n"
             yield "data: [DONE]\n\n"
-        except anthropic.AuthenticationError:
-            yield f"data: {json.dumps({'error': 'API key inválida. Verifica tu ANTHROPIC_API_KEY.'})}\n\n"
+        except groq.AuthenticationError:
+            yield f"data: {json.dumps({'error': 'API key inválida. Verifica tu GROQ_API_KEY.'})}\n\n"
             yield "data: [DONE]\n\n"
         except Exception as e:
             yield f"data: {json.dumps({'error': str(e)})}\n\n"
@@ -886,7 +882,7 @@ if __name__ == "__main__":
     print(f"\n✦ NER DEREJ · נֵר דֶּרֶךְ")
     print(f"  Servidor corriendo en http://localhost:{port}")
     if not api_key:
-        print("  ⚠  ANTHROPIC_API_KEY no encontrada — crea un archivo .env")
+        print("  ⚠  GROQ_API_KEY no encontrada — crea un archivo .env")
     else:
         print(f"  ✓  API configurada · {len(AGENTS)} agentes listos")
     print()
