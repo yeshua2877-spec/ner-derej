@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Estadisticas de Uso | Ner Derej</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:          #0F1923;
+      --bg-panel:    #151F2E;
+      --bg-card:     #1A2744;
+      --gold:        #C9A227;
+      --gold-lt:     #E8C547;
+      --gold-border: rgba(201,162,39,0.30);
+      --text-w:      #FFFFFF;
+      --text-lt:     rgba(255,255,255,0.85);
+      --text-md:     rgba(255,255,255,0.60);
+      --text-muted:  rgba(255,255,255,0.40);
+      --border:      rgba(255,255,255,0.09);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text-lt);
+      min-height: 100vh;
+    }
+
+    header {
+      background: linear-gradient(135deg, #0D1F3C 0%, #1B3A6B 55%, #0A2040 100%);
+      border-bottom: 1px solid var(--gold-border);
+      padding: 24px 32px;
+    }
+    header h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--gold);
+      letter-spacing: 0.02em;
+    }
+    header p {
+      font-size: 12px;
+      color: var(--text-md);
+      margin-top: 4px;
+    }
+    header a {
+      display: inline-block;
+      margin-top: 14px;
+      font-size: 12px;
+      color: var(--text-md);
+      text-decoration: none;
+      border: 1px solid var(--border);
+      padding: 5px 14px;
+      border-radius: 4px;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    header a:hover { color: var(--gold); border-color: var(--gold-border); }
+
+    main {
+      max-width: 920px;
+      margin: 0 auto;
+      padding: 36px 16px 60px;
+    }
+
+    .month-section { margin-bottom: 44px; }
+
+    .month-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--gold);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--gold-border);
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    thead tr { background: var(--bg-card); }
+    thead th {
+      padding: 11px 16px;
+      text-align: right;
+      font-weight: 600;
+      font-size: 10.5px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    thead th:first-child { text-align: left; }
+
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background 0.12s;
+    }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: rgba(255,255,255,0.03); }
+
+    td {
+      padding: 10px 16px;
+      text-align: right;
+      color: var(--text-lt);
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+    td:first-child {
+      text-align: left;
+      color: var(--text-md);
+      font-size: 12px;
+    }
+
+    .row-total {
+      background: rgba(201,162,39,0.06) !important;
+      border-top: 1px solid var(--gold-border) !important;
+    }
+    .row-total td { font-weight: 600; color: var(--text-w); }
+    .row-total td:first-child {
+      color: var(--gold);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .cost { color: var(--gold-lt); font-weight: 500; }
+
+    .msg {
+      text-align: center;
+      padding: 64px 16px;
+      color: var(--text-muted);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 600px) {
+      header { padding: 16px; }
+      header h1 { font-size: 18px; }
+      main { padding: 20px 10px 40px; }
+      td, thead th { padding: 9px 10px; font-size: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Estadisticas de Uso</h1>
+    <p>Registro diario de consultas y consumo de tokens de la API</p>
+    <a href="/">Volver al sitio</a>
+  </header>
+  <main id="main">
+    <div class="msg">Cargando datos...</div>
+  </main>
+
+  <script>
+    const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+                         'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    const DAY_MONTHS  = ['ene','feb','mar','abr','may','jun',
+                         'jul','ago','sep','oct','nov','dic'];
+
+    function fmtNum(n)  { return Number(n).toLocaleString('es-AR'); }
+    function fmtCost(n) { return '$ ' + Number(n).toFixed(4); }
+    function fmtDate(iso) {
+      const [, m, d] = iso.split('-');
+      return `${parseInt(d, 10)} ${DAY_MONTHS[parseInt(m, 10) - 1]}`;
+    }
+
+    fetch('/api/usage')
+      .then(r => r.json())
+      .then(data => {
+        const main = document.getElementById('main');
+        const days = Object.keys(data).sort().reverse();
+
+        if (days.length === 0) {
+          main.innerHTML = '<div class="msg">Sin datos registrados aun.<br>Los registros aparecen despues de la primera consulta.</div>';
+          return;
+        }
+
+        // Agrupar por YYYY-MM
+        const byMonth = {};
+        for (const day of days) {
+          const mo = day.slice(0, 7);
+          (byMonth[mo] = byMonth[mo] || []).push(day);
+        }
+
+        let html = '';
+        for (const mo of Object.keys(byMonth).sort().reverse()) {
+          const [y, m] = mo.split('-');
+          const title  = `${MONTH_NAMES[parseInt(m, 10) - 1]} ${y}`;
+          let tQ = 0, tIn = 0, tOut = 0, tCost = 0;
+          let rows = '';
+
+          for (const day of byMonth[mo]) {
+            const d = data[day];
+            const q    = d.questions     || 0;
+            const inp  = d.input_tokens  || 0;
+            const out  = d.output_tokens || 0;
+            const cost = d.cost_usd      || 0;
+            tQ += q; tIn += inp; tOut += out; tCost += cost;
+            rows += `<tr>
+              <td>${fmtDate(day)}</td>
+              <td>${fmtNum(q)}</td>
+              <td>${fmtNum(inp)}</td>
+              <td>${fmtNum(out)}</td>
+              <td class="cost">${fmtCost(cost)}</td>
+            </tr>`;
+          }
+
+          html += `
+            <div class="month-section">
+              <div class="month-title">${title}</div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Fecha</th>
+                      <th>Preguntas</th>
+                      <th>Tokens entrada</th>
+                      <th>Tokens salida</th>
+                      <th>Costo USD</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${rows}
+                    <tr class="row-total">
+                      <td>Total del mes</td>
+                      <td>${fmtNum(tQ)}</td>
+                      <td>${fmtNum(tIn)}</td>
+                      <td>${fmtNum(tOut)}</td>
+                      <td class="cost">${fmtCost(tCost)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>`;
+        }
+        main.innerHTML = html;
+      })
+      .catch(() => {
+        document.getElementById('main').innerHTML =
+          '<div class="msg">Error al cargar los datos de uso.</div>';
+      });
+  </script>
+</body>
+</html>

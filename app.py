@@ -881,6 +881,11 @@ def health():
     return jsonify({"status": "ok", "api_configured": bool(client), "agents": len(AGENTS)})
 
 
+@app.route("/stats")
+def stats_page():
+    return send_from_directory(".", "stats.html")
+
+
 @app.route("/api/usage")
 def usage_stats():
     try:
@@ -910,6 +915,10 @@ def chat():
     if not messages:
         return jsonify({"error": "No hay mensajes para procesar"}), 400
 
+    # Contar la pregunta al recibir el request, independientemente de si el stream completa.
+    # Los tokens de Sonnet se registran dentro del generador cuando el stream termina.
+    log_usage(0, 0, "claude-sonnet-4-6", count_question=True)
+
     def generate():
         try:
             with client.messages.stream(
@@ -931,7 +940,7 @@ def chat():
                     final.usage.input_tokens,
                     final.usage.output_tokens,
                     "claude-sonnet-4-6",
-                    count_question=True,
+                    count_question=False,
                 )
             yield "data: [DONE]\n\n"
         except anthropic.AuthenticationError:
