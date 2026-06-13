@@ -684,6 +684,8 @@ button { font-family: inherit; cursor: pointer; }
 }
 .send-btn:hover:not(:disabled) { background: var(--gold-lt); transform: scale(1.06); }
 .send-btn:disabled { background: rgba(255,255,255,.15); cursor: not-allowed; transform: none; }
+.send-btn.stop { background: #c0392b; color: #fff; }
+.send-btn.stop:hover { background: #e74c3c; transform: scale(1.06); }
 
 /* ─── TOAST ──────────────────────────────────────────── */
 .toast {
@@ -1057,9 +1059,10 @@ const COORDINATOR = {
   tips:['¿Cómo ayudo a mi hijo adolescente que está alejándose de la fe?','¿Qué dice la Biblia sobre el manejo del dinero en la familia?','Tengo ansiedad y no sé cómo enfrentarla desde la fe'] };
 
 /* ── STATE ──────────────────────────────────────────── */
-let current = null;
-let history = [];
-let busy    = false;
+let current   = null;
+let history   = [];
+let busy      = false;
+let abortCtrl = null;
 
 /* ── BUILD COORDINADOR ENTRY ────────────────────────── */
 const coordSlot = document.getElementById('coordSlot');
@@ -1188,6 +1191,28 @@ function setAgentHeader(a) {
   if (sbBtn) sbBtn.classList.add('active');
 }
 
+function showStopBtn() {
+  const btn = document.getElementById('sendBtn');
+  btn.onclick = stopGeneration;
+  btn.title = 'Detener';
+  btn.disabled = false;
+  btn.classList.add('stop');
+  btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14"><rect x="1" y="1" width="12" height="12" rx="2" fill="currentColor"/></svg>';
+}
+
+function showSendBtn() {
+  const btn = document.getElementById('sendBtn');
+  btn.onclick = send;
+  btn.title = 'Enviar';
+  btn.disabled = false;
+  btn.classList.remove('stop');
+  btn.innerHTML = '<svg width="17" height="17" viewBox="0 0 20 20" fill="none"><path d="M2 10L18 2L10 18L8.5 11.5L2 10Z" fill="currentColor"/></svg>';
+}
+
+function stopGeneration() {
+  if (abortCtrl) abortCtrl.abort();
+}
+
 /* ── SEND ───────────────────────────────────────────── */
 function useTip(txt) {
   document.getElementById('chatInp').value = txt;
@@ -1213,8 +1238,10 @@ async function send() {
 
   inp.value = '';
   inp.style.height = 'auto';
-  document.getElementById('sendBtn').disabled = true;
   busy = true;
+  abortCtrl = new AbortController();
+  const { signal } = abortCtrl;
+  showStopBtn();
 
   addMsg('user', txt);
 
@@ -1232,7 +1259,8 @@ async function send() {
       const cls = await fetch('/api/classify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: txt, current_agent_id: current.id })
+        body: JSON.stringify({ question: txt, current_agent_id: current.id }),
+        signal,
       });
       if (cls.ok) {
         const { agent_id } = await cls.json();
@@ -1260,12 +1288,16 @@ async function send() {
           }
         }
       }
-    } catch (_) { /* si falla la clasificacion, el agente actual responde */ }
+    } catch (e) {
+      if (e.name === 'AbortError') throw e;
+      /* otros errores de clasificacion: el agente actual responde */
+    }
 
     const res = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ agent_id: targetAgent.id, messages: baseMsgs })
+      body: JSON.stringify({ agent_id: targetAgent.id, messages: baseMsgs }),
+      signal,
     });
 
     if (!res.ok) {
@@ -1321,13 +1353,24 @@ async function send() {
     }
 
   } catch (err) {
-    removeEl(typId);
-    if (msgEl) removeEl(msgEl.id);
-    addMsg('agent', '⚠ Error de conexión. Verifica que el servidor esté corriendo.');
-    showToast('Error de conexión con el servidor.');
+    if (err.name === 'AbortError') {
+      removeEl(typId);
+      if (full && msgEl) {
+        setMsgBody(msgEl, full);
+        addDownloadButton(msgEl, txt, full, targetAgent);
+      } else if (msgEl) {
+        removeEl(msgEl.id);
+      }
+    } else {
+      removeEl(typId);
+      if (msgEl) removeEl(msgEl.id);
+      addMsg('agent', '⚠ Error de conexión. Verifica que el servidor esté corriendo.');
+      showToast('Error de conexión con el servidor.');
+    }
   } finally {
     busy = false;
-    document.getElementById('sendBtn').disabled = false;
+    abortCtrl = null;
+    showSendBtn();
     inp.focus();
   }
 }
@@ -1352,8 +1395,10 @@ async function sendCoordinator(txt) {
   const inp = document.getElementById('chatInp');
   inp.value = '';
   inp.style.height = 'auto';
-  document.getElementById('sendBtn').disabled = true;
   busy = true;
+  abortCtrl = new AbortController();
+  const { signal } = abortCtrl;
+  showStopBtn();
 
   addMsg('user', txt);
   const baseMsgs = [...history, { role: 'user', content: txt }];
@@ -1368,7 +1413,8 @@ async function sendCoordinator(txt) {
     const cls = await fetch('/api/classify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question: txt })
+      body: JSON.stringify({ question: txt }),
+      signal,
     });
     if (!cls.ok) {
       const err = await cls.json().catch(() => ({}));
@@ -1387,7 +1433,8 @@ async function sendCoordinator(txt) {
     const res = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ agent_id: agentObj.id, messages: baseMsgs })
+      body: JSON.stringify({ agent_id: agentObj.id, messages: baseMsgs }),
+      signal,
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
@@ -1436,13 +1483,24 @@ async function sendCoordinator(txt) {
     if (full && msgEl) addDownloadButton(msgEl, txt, full, agentObj);
 
   } catch (err) {
-    removeEl(typId);
-    if (msgEl) removeEl(msgEl.id);
-    addMsg('agent', '⚠ Error de conexión. Verifica que el servidor esté corriendo.', COORDINATOR);
-    showToast('Error de conexión con el servidor.');
+    if (err.name === 'AbortError') {
+      removeEl(typId);
+      if (full && msgEl) {
+        setMsgBody(msgEl, full);
+        addDownloadButton(msgEl, txt, full, current);
+      } else if (msgEl) {
+        removeEl(msgEl.id);
+      }
+    } else {
+      removeEl(typId);
+      if (msgEl) removeEl(msgEl.id);
+      addMsg('agent', '⚠ Error de conexión. Verifica que el servidor esté corriendo.', COORDINATOR);
+      showToast('Error de conexión con el servidor.');
+    }
   } finally {
     busy = false;
-    document.getElementById('sendBtn').disabled = false;
+    abortCtrl = null;
+    showSendBtn();
     inp.focus();
   }
 }
