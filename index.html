@@ -283,8 +283,8 @@ button { font-family: inherit; cursor: pointer; }
   display: flex; align-items: center; justify-content: center;
   flex-wrap: wrap; gap: 7px;
   margin: 10px auto 14px;
-  font-size: 12px; color: var(--text-muted);
-  font-style: italic;
+  font-size: 12px; color: var(--text-lt);
+  font-style: normal;
 }
 .routing-pill {
   display: inline-flex; align-items: center; gap: 6px;
@@ -1290,11 +1290,11 @@ function addRoutingNote(agentObj) {
   if (wl) wl.remove();
   const div = document.createElement('div');
   div.className = 'routing-note';
-  div.innerHTML = `Te derivo al agente
+  div.innerHTML = `Su consulta corresponde al area de
     <span class="routing-pill" style="--rc:${agentObj.col}">
       <span class="routing-pill-ic" style="background:${agentObj.col}">${agentObj.icon}</span>
       ${escHtml(agentObj.name)}
-    </span>`;
+    </span>. Derivando...`;
   msgs.appendChild(div);
   scrollBottom();
 }
