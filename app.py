@@ -784,6 +784,15 @@ CLASSIFIER_SYSTEM = (
     "Si ninguno encaja con claridad, responde LOGOS."
 )
 
+CLASSIFIER_BIAS = (
+    "\n\nCONTEXTO: Esta pregunta fue recibida por el agente {agent_id} "
+    "(area de especialidad: {agent_area}).\n"
+    "INSTRUCCION DE LENIENCIA: Si la pregunta es razonablemente atendible por {agent_id} "
+    "— aunque otro agente sea mas especializado — responde {agent_id}. "
+    "Solo responde con un identificador diferente cuando la pregunta claramente NO pertenece "
+    "al area de {agent_id}. Ante la duda, mantene {agent_id}."
+)
+
 
 # ─────────────────────────────────────────────────────────────
 # REGISTRO DE USO DIARIO
@@ -831,8 +840,17 @@ def classify():
 
     data = request.get_json()
     question = (data or {}).get("question", "").strip()
+    current_agent_id = (data or {}).get("current_agent_id", "").strip().upper()
     if not question:
         return jsonify({"error": "No hay pregunta para clasificar"}), 400
+
+    if current_agent_id and current_agent_id in AGENT_AREAS:
+        system_text = CLASSIFIER_SYSTEM + CLASSIFIER_BIAS.format(
+            agent_id=current_agent_id,
+            agent_area=AGENT_AREAS[current_agent_id],
+        )
+    else:
+        system_text = CLASSIFIER_SYSTEM
 
     try:
         resp = client.messages.create(
@@ -841,7 +859,7 @@ def classify():
             system=[
                 {
                     "type": "text",
-                    "text": CLASSIFIER_SYSTEM,
+                    "text": system_text,
                     "cache_control": {"type": "ephemeral"},
                 }
             ],

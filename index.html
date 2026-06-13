@@ -1205,24 +1205,48 @@ async function send() {
 
   addMsg('user', txt);
 
-  const msgs = [...history, { role: 'user', content: txt }];
-  const typId = addTyping();
+  const baseMsgs = [...history, { role: 'user', content: txt }];
+  let typId = addTyping();
   scrollBottom();
 
   let full = '';
   let msgEl = null;
+  let targetAgent = current;
 
   try {
+    // ── DERIVACION EN CADENA: clasificar antes de responder ──
+    try {
+      const cls = await fetch('/api/classify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: txt, current_agent_id: current.id })
+      });
+      if (cls.ok) {
+        const { agent_id } = await cls.json();
+        if (agent_id && agent_id !== current.id) {
+          const routed = AGENTS.find(a => a.id === agent_id);
+          if (routed) {
+            targetAgent = routed;
+            removeEl(typId);
+            addMsg('agent', `Esta consulta no corresponde a mi area de ${current.name}. Lo derivo al coordinador.`, current);
+            addRoutingNote(routed);
+            typId = addTyping(routed);
+            scrollBottom();
+          }
+        }
+      }
+    } catch (_) { /* si falla la clasificacion, el agente actual responde */ }
+
     const res = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ agent_id: current.id, messages: msgs })
+      body: JSON.stringify({ agent_id: targetAgent.id, messages: baseMsgs })
     });
 
     if (!res.ok) {
       const err = await res.json();
       removeEl(typId);
-      addMsg('agent', '⚠ ' + (err.error || 'Error al conectar con el agente.'));
+      addMsg('agent', '⚠ ' + (err.error || 'Error al conectar con el agente.'), targetAgent);
       return;
     }
 
@@ -1231,7 +1255,7 @@ async function send() {
     let buf = '';
 
     removeEl(typId);
-    msgEl = addMsg('agent', '');
+    msgEl = addMsg('agent', '', targetAgent);
 
     let doneStreaming = false;
     while (!doneStreaming) {
@@ -1261,14 +1285,14 @@ async function send() {
     }
 
     if (full) setMsgBody(msgEl, full);
-    history = [...msgs, { role: 'assistant', content: full }];
+    history = [...baseMsgs, { role: 'assistant', content: full }];
 
-    if (current && current.id === 'MELODIA') {
+    if (targetAgent.id === 'MELODIA') {
       addSunoButton(msgEl, full);
     }
 
     if (full && msgEl) {
-      addDownloadButton(msgEl, txt, full);
+      addDownloadButton(msgEl, txt, full, targetAgent);
     }
 
   } catch (err) {
@@ -1444,7 +1468,7 @@ function stripSunoBlock(text) {
   return text.replace(/\n?---SUNO_PROMPT_START---[\s\S]*?---SUNO_PROMPT_END---\n?/g, '');
 }
 
-function addTyping() {
+function addTyping(agentObj) {
   const id = 'typ-' + (++msgCnt);
   const msgs = document.getElementById('chatMsgs');
   const wl = msgs.querySelector('.welcome-msg');
@@ -1456,8 +1480,9 @@ function addTyping() {
 
   const av = document.createElement('div');
   av.className = 'msg-av';
-  av.textContent = current ? current.icon : '?';
-  av.style.cssText = `background:${current ? current.col : '#1B3A6B'};color:#fff`;
+  const ag = agentObj || current;
+  av.textContent = ag ? ag.icon : '?';
+  av.style.cssText = `background:${ag ? ag.col : '#1B3A6B'};color:#fff`;
 
   const dots = document.createElement('div');
   dots.className = 'typing-dots';
