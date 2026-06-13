@@ -1175,6 +1175,19 @@ function clearChat() {
   if (current) openAgent(current);
 }
 
+/* ── CHAIN ROUTING HELPERS ──────────────────────────── */
+const pause = ms => new Promise(r => setTimeout(r, ms));
+
+function setAgentHeader(a) {
+  document.getElementById('chIcon').style.background = a.col;
+  document.getElementById('chIcon').textContent = a.icon;
+  document.getElementById('chName').textContent = a.name;
+  document.getElementById('chSub').textContent = a.sub;
+  document.querySelectorAll('.sb-agent-btn').forEach(b => b.classList.remove('active'));
+  const sbBtn = document.getElementById('sb-' + a.id);
+  if (sbBtn) sbBtn.classList.add('active');
+}
+
 /* ── SEND ───────────────────────────────────────────── */
 function useTip(txt) {
   document.getElementById('chatInp').value = txt;
@@ -1226,10 +1239,22 @@ async function send() {
         if (agent_id && agent_id !== current.id) {
           const routed = AGENTS.find(a => a.id === agent_id);
           if (routed) {
-            targetAgent = routed;
+            const originAgent = current;
+
+            // Paso 1 — agente actual avisa (header ya muestra al agente actual)
             removeEl(typId);
-            addMsg('agent', `Esta consulta no corresponde a mi area de ${current.name}. Lo derivo al coordinador.`, current);
+            addMsg('agent', `Esta consulta no corresponde a mi area de ${originAgent.name}. Lo derivo al coordinador.`, originAgent);
+
+            // Paso 2 — pausa → pantalla cambia al COORDINADOR
+            await pause(1200);
+            setAgentHeader(COORDINATOR);
             addRoutingNote(routed);
+
+            // Paso 3 — pausa → pantalla cambia al agente correcto (queda activo)
+            await pause(1200);
+            current = routed;
+            targetAgent = routed;
+            setAgentHeader(routed);
             typId = addTyping(routed);
             scrollBottom();
           }
